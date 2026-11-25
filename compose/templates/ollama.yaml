@@ -1,27 +1,67 @@
-# MODÈLE INACTIF — Ollama (CPU). Activation : image épinglée (version + digest), volume
-# local-ai-ollama provisionné, profil B appliqué, benchmarks. Double garde : profile "ollama"
-# + référence imposée dépôt:version@sha256 (aucune image par défaut). Format du digest et
-# refus de "latest" contrôlés par local-ai.ps1 config (Compose ne valide pas le format).
-# Non-root : à valider avec l'image retenue (OLLAMA_MODELS + droits du volume).
+# MODULE Ollama (CPU uniquement) — ACTIVÉ en 4.B.1 via include dans compose.yaml.
+# Double garde conservée : profile "ollama" + référence imposée dépôt:version@sha256 (aucune image par défaut).
+# Format du digest et refus de "latest" contrôlés par local-ai.ps1 config (Compose ne valide pas le format).
+# Image validée : ollama/ollama:0.40.18@sha256:4e0d5daa…040b (linux/amd64), voir .env / ADR-0004.
+# Sécurité : UID/GID 1000 (utilisateur ubuntu de l'image), cap_drop ALL, Seccomp par défaut,
+# no-new-privileges, racine en lecture seule, aucun port publié, réseau interne uniquement.
+# Initialisation root temporaire SANS réseau (chown du volume /models), seule capacité : CHOWN.
+x-ollama-logging: &ollama-logging
+  driver: local
+  options:
+    max-size: "10m"
+    max-file: "5"
+    compress: "true"
+
 services:
+  ollama-init:
+    image: ${OLLAMA_IMAGE_REPO:?OLLAMA_IMAGE_REPO requis}:${OLLAMA_IMAGE_TAG:?OLLAMA_IMAGE_TAG requis (version explicite)}@sha256:${OLLAMA_IMAGE_SHA256:?OLLAMA_IMAGE_SHA256 requis (64 hex)}
+    profiles: [ollama]
+    restart: "no"
+    user: "0:0"
+    entrypoint: ["/usr/bin/chown", "1000:1000", "/models"]
+    command: []
+    network_mode: none
+    volumes:
+      - local-ai-ollama:/models
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [CHOWN]
+    security_opt:
+      - no-new-privileges:true
+    logging: *ollama-logging
+
   ollama:
     image: ${OLLAMA_IMAGE_REPO:?OLLAMA_IMAGE_REPO requis}:${OLLAMA_IMAGE_TAG:?OLLAMA_IMAGE_TAG requis (version explicite)}@sha256:${OLLAMA_IMAGE_SHA256:?OLLAMA_IMAGE_SHA256 requis (64 hex)}
     profiles: [ollama]
     restart: "no"
+    user: "1000:1000"
+    depends_on:
+      ollama-init:
+        condition: service_completed_successfully
     env_file:
       - path: ../../config/ollama/ollama.env
         required: true
+    environment:
+      HOME: /tmp
+      NVIDIA_VISIBLE_DEVICES: void
     networks: [local-ai-core]
     volumes:
-      - local-ai-ollama:/root/.ollama
+      - local-ai-ollama:/models
     read_only: true
     tmpfs:
-      - /tmp:size=256m
+      - /tmp:size=256m,uid=1000,gid=1000,mode=0700
     cap_drop: [ALL]
     security_opt:
       - no-new-privileges:true
     expose:
       - "11434"
+    healthcheck:
+      test: ["CMD", "/bin/ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    logging: *ollama-logging
 
 networks:
   local-ai-core:

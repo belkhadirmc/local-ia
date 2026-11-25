@@ -5,8 +5,8 @@ name: local-ai
 
 include:
   - path: compose/services/core.yaml
+  - path: compose/templates/ollama.yaml   # ACTIF (4.B.1), profil Compose "ollama"
   # Modules INACTIFS (modèles) — à activer un par un après validation :
-  # - path: compose/templates/ollama.yaml
   # - path: compose/templates/opencode.yaml
   # - path: compose/templates/mcp.yaml
   # - path: compose/templates/project.yaml

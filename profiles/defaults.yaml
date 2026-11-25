@@ -16,13 +16,15 @@ applied:
       memory_gib: 23.47
       swap_gib: 8
   network:
-    profile: null
-    status: not_applied
-    reason: "aucun service déployé"
+    profile: N1
+    status: applied
+    verified: "2026-11-25 (action 4.B.1)"
+    detail: "ollama sur local-ai-core (interne) uniquement, aucun port publié, aucun réseau externe"
   security:
-    profile: null
-    status: not_applied
-    reason: "aucun agent déployé"
+    profile: S2
+    status: partial
+    reason: "aucun agent déployé ; durcissement conteneur appliqué à ollama (4.B.1)"
+    container_hardening: "uid 1000, cap_drop ALL, seccomp, no-new-privileges, racine en lecture seule"
   backup:
     profile: BK1
     status: applied
@@ -30,4 +32,12 @@ applied:
       - 2.B.1_20261125_164110
       - 2.B.3_20261125_164653
       - 2.B.3.1_20261125_165143
+modules:
+  ollama:
+    status: running
+    image: "ollama/ollama:0.40.18@sha256:4e0d5daa6c5cd91e27011977031466844c5ea4ba2393b35e78068835edec040b"
+    platform: linux/amd64
+    volume: local-ai-ollama
+    models_loaded: 0
+    verified: "2026-11-25 (action 4.B.1)"
 note: "État appliqué renseigné manuellement ; à automatiser via local-ai.ps1 profile (non implémenté)."

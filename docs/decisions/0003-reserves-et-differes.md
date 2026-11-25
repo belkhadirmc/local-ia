@@ -14,8 +14,8 @@ Statut : ouvert — à traiter avant ou pendant le déploiement (étape 4+).
 
 ## Fonctionnalités différées
 
-- Images épinglées Ollama / OpenCode / MCP ; Ollama non-root à valider ; chemins de données OpenCode.
+- Images épinglées OpenCode / MCP ; chemins de données OpenCode. (Ollama : épinglé et non-root, résolu en 4.B.1 — ADR-0004.)
 - Format de configuration OpenCode (export depuis `agents/definitions/`) ; modèle Continue à valider.
-- Commandes `local-ai.ps1` : start, stop, profile, model, agent, mcp, monitor, permissions, backup, restore, maintenance, emergency-stop.
+- Commandes `local-ai.ps1` : profile, model, agent, mcp, monitor, permissions, backup, restore, maintenance, emergency-stop.
 - Tests d'exécution : sécurité, isolation réseau, localhost, supervision (seuils `config/monitoring/thresholds.yaml`).
 - État appliqué des profils N1/S2 : non appliqué tant qu'aucun service n'est déployé (`profiles/defaults.yaml`).

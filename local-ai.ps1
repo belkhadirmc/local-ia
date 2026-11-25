@@ -19,10 +19,14 @@ $Implemented = [ordered]@{
     'help'   = 'Affiche cette aide'
     'status' = 'État en lecture seule : Docker, WSL2, ressources, disque, inventaire local-ai'
     'config' = 'Valide YAML, Compose, références agents/modèles, MCP, exclusions Git'
+    'start'  = 'Démarre un module activé (défaut : ollama) après validation ; aucun téléchargement implicite'
+    'stop'   = 'Arrête un module (défaut : ollama) sans supprimer conteneurs, réseau ni volume'
+}
+# Modules démarrables : profil Compose, image (variables .env), volumes externes requis
+$Modules = @{
+    'ollama' = @{ Profile = 'ollama'; ImagePrefix = 'OLLAMA'; Volumes = @('local-ai-ollama'); Service = 'ollama' }
 }
 $Planned = [ordered]@{
-    'start'          = 'Démarrer les modules activés'
-    'stop'           = 'Arrêter les modules'
     'profile'        = 'Afficher / appliquer un profil (A-C, N1-N4, S1-S4, BK1-BK3)'
     'model'          = 'Gérer les modèles Ollama'
     'agent'          = 'Gérer les agents'
@@ -201,10 +205,90 @@ function Test-Config {
     if ($fail) { exit 1 }
 }
 
+function Get-EnvValue {
+    param([string]$Name)
+    $v = [Environment]::GetEnvironmentVariable($Name)
+    if ($v) { return $v.Trim() }
+    $f = Join-Path $Root '.env'
+    if (Test-Path $f) {
+        $m = Select-String -Path $f -Pattern ('^\s*' + [regex]::Escape($Name) + '=(.*)$') | Select-Object -Last 1
+        if ($m) { return $m.Matches[0].Groups[1].Value.Trim() }
+    }
+    $null
+}
+
+function Resolve-Module {
+    param([string[]]$Args0)
+    $name = if ($Args0 -and $Args0[0]) { $Args0[0].ToLowerInvariant() } else { 'ollama' }
+    if (-not $Modules.ContainsKey($name)) { throw "Module '$name' inconnu ou non activé (disponibles : $($Modules.Keys -join ', '))." }
+    $m = $Modules[$name].Clone(); $m.Name = $name; $m
+}
+
+function Assert-Preflight {
+    param($Module)
+    $errs = @()
+    if (-not (Test-DockerEngine)) { throw 'Docker Engine indisponible : démarrer Docker Desktop.' }
+    Push-Location $Root
+    try {
+        $r = Invoke-Native docker @('compose', 'config', '-q')
+        if ($r.Code -ne 0) { $errs += "docker compose config : $($r.Output)" }
+        $p = $Module.ImagePrefix
+        $repo = Get-EnvValue "${p}_IMAGE_REPO"; $tag = Get-EnvValue "${p}_IMAGE_TAG"; $sha = Get-EnvValue "${p}_IMAGE_SHA256"
+        if (-not $repo) { $errs += "${p}_IMAGE_REPO absent" }
+        if (-not $tag -or $tag -match '^(latest|stable|main|edge)$') { $errs += "${p}_IMAGE_TAG absent ou non explicite" }
+        if ($sha -notmatch '^[0-9a-f]{64}$') { $errs += "${p}_IMAGE_SHA256 absent ou invalide (64 hex)" }
+        if (-not $errs) {
+            $ref = "${repo}@sha256:${sha}"
+            if ((Invoke-Native docker @('image', 'inspect', $ref, '--format', '{{.Id}}')).Code -ne 0) {
+                $errs += "image $repo`:$tag@sha256:$($sha.Substring(0,12))… absente localement (aucun téléchargement implicite : docker pull explicite requis)"
+            }
+        }
+        foreach ($v in $Module.Volumes) {
+            if ((Invoke-Native docker @('volume', 'inspect', $v, '--format', '{{.Name}}')).Code -ne 0) { $errs += "volume externe '$v' absent (à provisionner : docker volume create $v)" }
+        }
+    } finally { Pop-Location }
+    if ($errs) { throw ("Validation préalable ÉCHOUÉE :`n - " + ($errs -join "`n - ")) }
+    Write-Output "Validation préalable : OK ($($Module.Name))"
+}
+
+function Start-Module {
+    param([string[]]$Args0)
+    $m = Resolve-Module $Args0
+    Assert-Preflight $m
+    Push-Location $Root
+    try {
+        $r = Invoke-Native docker @('compose', '--profile', $m.Profile, 'up', '-d', '--pull', 'never', '--no-build')
+        if ($r.Code -ne 0) { throw "docker compose up a échoué : $($r.Output)" }
+        $deadline = (Get-Date).AddSeconds(120)
+        do {
+            $id = (Invoke-Native docker @('compose', '--profile', $m.Profile, 'ps', '-q', $m.Service)).Output.Trim()
+            $h = if ($id) { (Invoke-Native docker @('inspect', $id, '--format', '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}')).Output.Trim() } else { 'absent' }
+            if ($h -in 'healthy', 'unhealthy', 'exited', 'absent') { break }
+            Start-Sleep -Seconds 3
+        } while ((Get-Date) -lt $deadline)
+        Write-Output "Module $($m.Name) : $h"
+        if ($h -ne 'healthy') { exit 1 }
+    } finally { Pop-Location }
+}
+
+function Stop-Module {
+    param([string[]]$Args0)
+    $m = Resolve-Module $Args0
+    if (-not (Test-DockerEngine)) { throw 'Docker Engine indisponible.' }
+    Push-Location $Root
+    try {
+        $r = Invoke-Native docker @('compose', '--profile', $m.Profile, 'stop')
+        if ($r.Code -ne 0) { throw "docker compose stop a échoué : $($r.Output)" }
+        Write-Output "Module $($m.Name) arrêté (conteneurs, réseau et volume conservés)."
+    } finally { Pop-Location }
+}
+
 switch ($Command.ToLowerInvariant()) {
     'help'   { Show-Help; exit 0 }
     'status' { Show-Status; exit 0 }
     'config' { Test-Config; exit 0 }
+    'start'  { try { Start-Module $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
+    'stop'   { try { Stop-Module $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
     default {
         if ($Planned.Contains($Command.ToLowerInvariant())) {
             Write-Error ("Commande '{0}' NON IMPLÉMENTÉE (prévue : {1})." -f $Command, $Planned[$Command.ToLowerInvariant()]) -ErrorAction Continue

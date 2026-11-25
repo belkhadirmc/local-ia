@@ -1,7 +1,7 @@
 # local-ai
 
 Infrastructure de développement multi-agent locale : Docker Desktop (WSL2), Ollama, OpenCode, Continue, VS Code.
-Étape 3.B.1 : **fondations uniquement** — aucun service déployé, aucun modèle téléchargé.
+État (4.B.1) : **Ollama 0.40.18 déployé** (CPU, réseau interne, aucun port publié) — aucun modèle téléchargé.
 
 ## Arborescence
 
@@ -25,9 +25,11 @@ Infrastructure de développement multi-agent locale : Docker Desktop (WSL2), Oll
 .\local-ai.ps1 help      # aide
 .\local-ai.ps1 status    # état en lecture seule
 .\local-ai.ps1 config    # validation de la configuration
+.\local-ai.ps1 start [ollama]   # validation préalable puis démarrage, sans téléchargement implicite
+.\local-ai.ps1 stop [ollama]    # arrêt sans suppression (conteneurs, réseau, volume conservés)
 ```
 
-Les autres commandes (`start`, `stop`, `profile`, `model`, `agent`, `mcp`, `monitor`, `permissions`,
+Les autres commandes (`profile`, `model`, `agent`, `mcp`, `monitor`, `permissions`,
 `backup`, `restore`, `maintenance`, `emergency-stop`) sont prévues et échouent explicitement tant qu'elles ne sont pas implémentées.
 
 ## Profils par défaut
