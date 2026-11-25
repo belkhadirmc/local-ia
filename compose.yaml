@@ -1,0 +1,12 @@
+# local-ai — point d'entrée Compose (architecture modulaire : include + surcharges explicites)
+# Valider : docker compose config -q
+# Surcharges sur autorisation uniquement : docker compose -f compose.yaml -f compose/overrides/<x>.yaml ...
+name: local-ai
+
+include:
+  - path: compose/services/core.yaml
+  # Modules INACTIFS (modèles) — à activer un par un après validation :
+  # - path: compose/templates/ollama.yaml
+  # - path: compose/templates/opencode.yaml
+  # - path: compose/templates/mcp.yaml
+  # - path: compose/templates/project.yaml

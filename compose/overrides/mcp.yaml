@@ -1,0 +1,12 @@
+# SURCHARGE SUR AUTORISATION — réseau local-ai-mcp : serveurs MCP externes explicitement autorisés.
+# Profil réseau requis : N4. Usage : docker compose -f compose.yaml -f compose/overrides/mcp.yaml ...
+# Un service n'obtient ce réseau que s'il le déclare explicitement dans une surcharge dédiée.
+networks:
+  local-ai-mcp:
+    name: local-ai-mcp
+    driver: bridge
+    internal: false
+    labels:
+      local-ai.network: mcp
+      local-ai.authorization: required
+      local-ai.profile: N4

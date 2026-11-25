@@ -1,0 +1,59 @@
+# ---- Secrets et environnements réels
+secrets/*
+!secrets/.gitkeep
+!secrets/README.md
+.env
+.env.*
+*.env
+!.env.example
+!**/.env.example
+!config/ollama/ollama.env
+*.pem
+*.key
+*.p12
+*.pfx
+*.kdbx
+id_rsa*
+id_ed25519*
+*credentials*
+*token*
+!**/*token*.md
+
+# ---- Sauvegardes, runtime, exports (dossiers conservés via .gitkeep)
+backups/**
+!backups/**/
+!backups/**/.gitkeep
+!backups/README.md
+runtime/**
+!runtime/**/
+!runtime/**/.gitkeep
+exports/**
+!exports/.gitkeep
+
+# ---- Projets indépendants (seuls les modèles sont suivis)
+projects/*
+!projects/README.md
+!projects/templates/
+
+# ---- État local des agents et outils
+.opencode/
+.continue/
+agents/**/state/
+agents/**/sessions/
+*.sqlite
+*.db
+
+# ---- Poids et caches de modèles
+*.gguf
+*.safetensors
+*.bin
+*.onnx
+models/blobs/
+models/manifests/
+models/benchmarks/results/
+
+# ---- Divers
+*.log
+*.tmp
+Thumbs.db
+desktop.ini

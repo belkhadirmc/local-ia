@@ -1,0 +1,10 @@
+# Test de structure : socle + tous les modèles + surcharges.
+# docker compose -f tests/integration/compose-activation.yaml -f compose/overrides/egress.yaml ... config -q --no-interpolate
+# Ne jamais utiliser pour up : les images sont volontairement non définies.
+name: local-ai-validation
+include:
+  - path: ../../compose/services/core.yaml
+  - path: ../../compose/templates/ollama.yaml
+  - path: ../../compose/templates/opencode.yaml
+  - path: ../../compose/templates/mcp.yaml
+  - path: ../../compose/templates/project.yaml

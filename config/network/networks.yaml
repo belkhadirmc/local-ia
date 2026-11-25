@@ -1,0 +1,38 @@
+# Catalogue des réseaux local-ai. Aucun réseau créé en 3.B.1.
+schema: local-ai/networks/v1
+networks:
+  - name: local-ai-core
+    internal: true
+    authorization: none
+    defined_in: compose/services/core.yaml
+  - name: "local-ai-project-<id>"
+    internal: true
+    authorization: none
+    defined_in: compose/templates/project.yaml
+  - name: local-ai-egress
+    internal: false
+    authorization: required
+    profile: N2
+    defined_in: compose/overrides/egress.yaml
+  - name: local-ai-cloud
+    internal: false
+    authorization: required
+    profile: N3
+    defined_in: compose/overrides/cloud.yaml
+  - name: local-ai-mcp
+    internal: false
+    authorization: required
+    profile: N4
+    defined_in: compose/overrides/mcp.yaml
+  - name: local-ai-localhost
+    internal: false
+    authorization: required
+    note: "publication 127.0.0.1 sans NAT sortant (à tester)"
+    defined_in: "compose/overrides/*-localhost.yaml"
+ports_planned:
+  - service: ollama
+    port: 11434
+    bind: "127.0.0.1"
+  - service: opencode
+    port: 4096
+    bind: "127.0.0.1"

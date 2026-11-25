@@ -1,0 +1,14 @@
+# Profil réseau N1.
+schema: local-ai/profile/network/v1
+id: N1
+name: local
+description: "Local uniquement : aucun accès Internet."
+allowed_networks:
+  - local-ai-core
+  - "local-ai-project-*"
+authorization: none
+ollama:
+  OLLAMA_NO_CLOUD: 1
+forbidden:
+  - "network_mode: host"
+  - "ports hors 127.0.0.1"

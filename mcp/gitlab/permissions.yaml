@@ -1,0 +1,21 @@
+# Permissions MCP GitLab (appliquées seulement si le serveur est activé).
+schema: local-ai/mcp-permissions/v1
+server: gitlab
+default: deny
+allow_when_enabled:
+  - projects.read
+  - issues.read
+  - merge_requests.read
+ask:
+  - issues.write
+  - merge_requests.comment
+deny:
+  - projects.delete
+  - push
+  - admin
+agents_allowed:
+  - architect
+  - reviewer
+  - security
+  - developer
+  - devops

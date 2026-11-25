@@ -1,0 +1,13 @@
+# Serveur MCP Modèle générique — MODÈLE désactivé.
+schema: local-ai/mcp-server/v1
+id: example
+name: "Modèle générique"
+enabled: false
+status: template
+image: null
+transport: null
+image_note: "à épingler (nom:version@sha256) — aucune image choisie"
+network: local-ai-mcp
+network_profile_required: N4
+env_file: secrets/mcp-example.env
+compose_template: compose/templates/mcp.yaml

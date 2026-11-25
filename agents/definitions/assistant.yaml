@@ -1,0 +1,33 @@
+# Agent Assistant — définition indépendante d'OpenCode.
+schema: local-ai/agent/v1
+id: assistant
+name: Assistant
+role: "Répond aux questions courantes et oriente vers l'agent adapté."
+model:
+  ref: qwen3.5-4b
+  confirmed: false
+  note: "à confirmer après benchmarks"
+instructions: ../prompts/assistant.md
+permissions:
+  baseline_profile: S2
+  read: allow
+  edit: deny
+  bash: deny
+  network: deny
+  mcp: deny
+tools:
+  - read
+  - grep
+  - glob
+delegation:
+  can_delegate_to:
+    - architect
+    - developer
+    - documentalist
+  max_depth: 1
+mcp:
+  authorizable: []
+  enabled: []
+opencode:
+  export: "à générer depuis cette définition"
+  status: not_converted

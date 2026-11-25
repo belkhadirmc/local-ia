@@ -1,0 +1,23 @@
+# Politiques de supervision VALIDÉES. Supervision non implémentée (local-ai.ps1 monitor).
+schema: local-ai/monitoring/v1
+disk_ssd_free_gib:
+  warning: 45
+  critical: 30
+  emergency: 15
+wsl2_ram_percent:
+  warning: 85
+  critical: 95
+cpu_percent:
+  threshold: 95
+  duration_minutes: 5
+windows_ram_free_min_gib: 4
+swap_used_max_gib: 2
+retention:
+  metrics_days: 7
+  audit_days: 30
+backups_local_quota_gib: 10
+automatic_deletion_of_critical: false
+actions:
+  warning: notification
+  critical: "notification + blocage des nouveaux chargements de modèle"
+  emergency: "proposer emergency-stop (validation manuelle)"

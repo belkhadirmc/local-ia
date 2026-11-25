@@ -1,0 +1,33 @@
+# Agent Sécurité — définition indépendante d'OpenCode.
+schema: local-ai/agent/v1
+id: security
+name: "Sécurité"
+role: "Audite sécurité, dépendances, secrets et configuration."
+model:
+  ref: gpt-oss-20b
+  confirmed: false
+  note: "à confirmer après benchmarks"
+instructions: ../prompts/security.md
+permissions:
+  baseline_profile: S2
+  read: allow
+  edit: deny
+  bash: deny
+  network: deny
+  mcp: ask
+tools:
+  - read
+  - grep
+  - glob
+  - git-read
+delegation:
+  can_delegate_to: []
+  max_depth: 1
+mcp:
+  authorizable:
+    - github
+    - gitlab
+  enabled: []
+opencode:
+  export: "à générer depuis cette définition"
+  status: not_converted

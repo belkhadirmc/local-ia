@@ -1,0 +1,12 @@
+# Permissions MCP Modèle générique (appliquées seulement si le serveur est activé).
+schema: local-ai/mcp-permissions/v1
+server: templates
+default: deny
+allow_when_enabled:
+  - read
+ask:
+  - write
+deny:
+  - delete
+  - admin
+agents_allowed: []

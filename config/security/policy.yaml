@@ -1,0 +1,24 @@
+# Politique de sécurité des conteneurs local-ai.
+schema: local-ai/security-policy/v1
+container_baseline:
+  user: "non-root si compatible"
+  seccomp: "profil par défaut (jamais unconfined)"
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  read_only: "si compatible"
+  restart: "no"
+forbidden:
+  - /var/run/docker.sock
+  - "privileged: true"
+  - "network_mode: host"
+  - "montage C:\\ ou lecteur Windows complet"
+  - "ports hors 127.0.0.1"
+secrets:
+  location: secrets/
+  versioned: false
+  displayed: false
+images:
+  pinning: "nom:version@sha256 obligatoire"
+  fictitious_images: interdites

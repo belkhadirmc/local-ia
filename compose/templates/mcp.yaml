@@ -1,0 +1,28 @@
+# MODÈLE INACTIF — serveur MCP générique (un service par serveur autorisé, profil N4).
+# Aucun serveur concret : image, transport et identifiants à définir dans mcp/<serveur>/.
+services:
+  mcp-server:
+    image: ${MCP_SERVER_IMAGE:?MCP_SERVER_IMAGE doit etre epinglee}
+    profiles: [mcp]
+    restart: "no"
+    user: "${LOCAL_AI_UID:-1000}:${LOCAL_AI_GID:-1000}"
+    env_file:
+      - path: ../../secrets/mcp-server.env
+        required: true
+    networks: [local-ai-mcp]
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  local-ai-mcp:
+    name: local-ai-mcp
+    driver: bridge
+    internal: false
+    labels:
+      local-ai.network: mcp
+      local-ai.authorization: required
+      local-ai.profile: N4

@@ -1,0 +1,66 @@
+# Registre des modèles — AUCUN modèle téléchargé. Tags, digest et taille à relever lors du pull
+# (aucune valeur inventée). Affectations à confirmer après benchmarks (models/benchmarks/).
+schema: local-ai/models/v1
+runtime: ollama
+policy:
+  concurrent_inferences: 1
+  loaded_models: 1
+  default_context: 8192
+  no_cloud: true
+models:
+  - id: gpt-oss-20b
+    tag: gpt-oss:20b
+    usage: "raisonnement, architecture, revue, sécurité"
+    status: not_pulled
+    tag_verified: false
+    digest: null
+    size_gib: null
+    fits_profile_B: to_benchmark
+  - id: qwen3-coder-30b
+    tag: qwen3-coder:30b
+    usage: "génération de code, DevOps"
+    status: not_pulled
+    tag_verified: false
+    digest: null
+    size_gib: null
+    fits_profile_B: to_benchmark
+  - id: qwen2.5-coder-14b
+    tag: qwen2.5-coder:14b
+    usage: "débogage"
+    status: not_pulled
+    tag_verified: false
+    digest: null
+    size_gib: null
+    fits_profile_B: to_benchmark
+  - id: qwen2.5-coder-7b
+    tag: qwen2.5-coder:7b
+    usage: "tests et QA"
+    status: not_pulled
+    tag_verified: false
+    digest: null
+    size_gib: null
+    fits_profile_B: to_benchmark
+  - id: qwen3.5-9b
+    tag: qwen3.5:9b
+    usage: documentation
+    status: not_pulled
+    tag_verified: false
+    digest: null
+    size_gib: null
+    fits_profile_B: to_benchmark
+  - id: qwen3.5-4b
+    tag: qwen3.5:4b
+    usage: "assistant généraliste léger"
+    status: not_pulled
+    tag_verified: false
+    digest: null
+    size_gib: null
+    fits_profile_B: to_benchmark
+  - id: qwen2.5-coder-1.5b
+    tag: qwen2.5-coder:1.5b
+    usage: "autocomplétion Continue à la demande"
+    status: not_pulled
+    tag_verified: false
+    digest: null
+    size_gib: null
+    fits_profile_B: to_benchmark

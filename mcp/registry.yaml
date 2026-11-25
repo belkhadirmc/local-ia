@@ -1,0 +1,36 @@
+# Registre MCP — tous les serveurs DÉSACTIVÉS. Aucun serveur concret ni identifiant réel.
+schema: local-ai/mcp-registry/v1
+default:
+  enabled: false
+  network: local-ai-mcp
+  network_profile_required: N4
+  security: ask
+servers:
+  - id: github
+    name: GitHub
+    enabled: false
+    status: template
+    definition: github/server.yaml
+    permissions: github/permissions.yaml
+    secrets: secrets/mcp-github.env
+  - id: gitlab
+    name: GitLab
+    enabled: false
+    status: template
+    definition: gitlab/server.yaml
+    permissions: gitlab/permissions.yaml
+    secrets: secrets/mcp-gitlab.env
+  - id: jira
+    name: Jira
+    enabled: false
+    status: template
+    definition: jira/server.yaml
+    permissions: jira/permissions.yaml
+    secrets: secrets/mcp-jira.env
+  - id: confluence
+    name: Confluence
+    enabled: false
+    status: template
+    definition: confluence/server.yaml
+    permissions: confluence/permissions.yaml
+    secrets: secrets/mcp-confluence.env

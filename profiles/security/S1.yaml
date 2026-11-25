@@ -1,0 +1,22 @@
+# Profil de sécurité S1.
+schema: local-ai/profile/security/v1
+id: S1
+name: supervised
+description: "Supervisé : toute action d'écriture, commande ou appel d'outil est soumise à validation."
+permissions:
+  read: allow
+  edit: ask
+  bash: ask
+  network: deny
+  mcp: deny
+  delegation: ask
+always_ask:
+  - "suppression de fichiers"
+  - "git push"
+  - "commandes hors workspace"
+  - "modification de secrets/"
+always_deny:
+  - "socket Docker"
+  - "conteneur privileged"
+  - "network_mode host"
+  - "montage global Windows"

@@ -1,0 +1,12 @@
+# MODÈLE Continue — à valider lors de l'installation de Continue (format config.yaml v1).
+# Nécessite l'exposition localhost d'Ollama (compose/overrides/ollama-localhost.yaml).
+name: local-ai
+version: "0.0.1"
+schema: v1
+models:
+  - name: "qwen2.5-coder 1.5b (autocomplétion)"
+    provider: ollama
+    model: qwen2.5-coder:1.5b
+    apiBase: http://127.0.0.1:11434
+    roles:
+      - autocomplete

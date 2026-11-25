@@ -1,0 +1,22 @@
+# Profil de sécurité S2.
+schema: local-ai/profile/security/v1
+id: S2
+name: semi-autonomous
+description: "Semi-autonome : lecture et analyse libres ; modifications et commandes soumises à validation."
+permissions:
+  read: allow
+  edit: ask
+  bash: ask
+  network: deny
+  mcp: ask
+  delegation: allow
+always_ask:
+  - "suppression de fichiers"
+  - "git push"
+  - "commandes hors workspace"
+  - "modification de secrets/"
+always_deny:
+  - "socket Docker"
+  - "conteneur privileged"
+  - "network_mode host"
+  - "montage global Windows"

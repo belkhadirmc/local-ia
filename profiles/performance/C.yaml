@@ -1,0 +1,29 @@
+# Profil de performance C — état SOUHAITÉ (non appliqué automatiquement).
+schema: local-ai/profile/performance/v1
+id: C
+wsl2:
+  memory: 32GB
+  processors: 12
+  swap: 8GB
+  autoMemoryReclaim: gradual
+ollama:
+  OLLAMA_CONTEXT_LENGTH: 16384
+  OLLAMA_NUM_PARALLEL: 1
+  OLLAMA_MAX_LOADED_MODELS: 1
+limits:
+  concurrent_inferences: 1
+  loaded_models: 1
+wslconfig_preview: |-
+  [wsl2]
+  memory=32GB
+  processors=12
+  swap=8GB
+
+  [experimental]
+  autoMemoryReclaim=gradual
+apply:
+  automatic: false
+  requires:
+    - "arrêt Docker Desktop"
+    - "wsl --shutdown"
+    - "sauvegarde BK1"

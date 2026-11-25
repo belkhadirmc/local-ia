@@ -1,0 +1,13 @@
+# Profil de sauvegarde BK2.
+schema: local-ai/profile/backup/v1
+id: BK2
+name: "données et projets"
+scope:
+  - "volumes local-ai-workspace-*"
+  - "volume local-ai-opencode"
+  - projects/
+destination: backups/projects
+integrity: "sha256 (SHA256SUMS.txt + manifest)"
+secrets: "jamais copiés en clair"
+quota_local_gib: 10
+automatic_deletion_of_critical: false

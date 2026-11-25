@@ -1,0 +1,35 @@
+# MODÈLE INACTIF — OpenCode (serveur, port 4096). Activation : image construite ou épinglée,
+# chemins de données confirmés, volume local-ai-opencode provisionné, agents convertis.
+services:
+  opencode:
+    image: ${OPENCODE_IMAGE:?OPENCODE_IMAGE doit etre epinglee ou construite localement}
+    profiles: [opencode]
+    restart: "no"
+    user: "${LOCAL_AI_UID:-1000}:${LOCAL_AI_GID:-1000}"
+    networks: [local-ai-core]
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+    volumes:
+      - local-ai-opencode:/data/opencode   # chemin à confirmer selon l'image retenue
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    expose:
+      - "4096"
+
+networks:
+  local-ai-core:
+    name: local-ai-core
+    driver: bridge
+    internal: true
+    labels:
+      local-ai.network: core
+      local-ai.authorization: none
+
+volumes:
+  local-ai-opencode:
+    name: local-ai-opencode
+    external: true

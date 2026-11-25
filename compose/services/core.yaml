@@ -1,0 +1,21 @@
+# Socle local-ai : réseau interne et volumes critiques (externes, à provisionner ultérieurement).
+# Aucun service ici : rien n'est créé tant qu'aucun module n'est activé.
+# Base de sécurité : non-root si compatible, Seccomp par défaut, cap_drop ALL,
+# no-new-privileges, lecture seule si compatible. Interdits : socket Docker,
+# privileged, network_mode host, montage global de lecteurs Windows.
+networks:
+  local-ai-core:
+    name: local-ai-core
+    driver: bridge
+    internal: true
+    labels:
+      local-ai.network: core
+      local-ai.authorization: none
+
+volumes:
+  local-ai-ollama:
+    name: local-ai-ollama
+    external: true
+  local-ai-opencode:
+    name: local-ai-opencode
+    external: true

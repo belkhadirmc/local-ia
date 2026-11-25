@@ -1,0 +1,19 @@
+# MODÈLE — réseau et volumes d'un projet. Variable obligatoire : LOCAL_AI_PROJECT (ex. demo).
+# Réseau interne local-ai-project-<id> ; workspace critique externe ; cache recréable.
+networks:
+  local-ai-project:
+    name: local-ai-project-${LOCAL_AI_PROJECT:?LOCAL_AI_PROJECT requis}
+    driver: bridge
+    internal: true
+    labels:
+      local-ai.network: project
+      local-ai.authorization: none
+
+volumes:
+  local-ai-workspace:
+    name: local-ai-workspace-${LOCAL_AI_PROJECT:?LOCAL_AI_PROJECT requis}
+    external: true
+  local-ai-cache:
+    name: local-ai-cache-${LOCAL_AI_PROJECT:?LOCAL_AI_PROJECT requis}
+    labels:
+      local-ai.volume: cache

@@ -1,0 +1,13 @@
+# Profil de sauvegarde BK3.
+schema: local-ai/profile/backup/v1
+id: BK3
+name: complet
+scope:
+  - BK1
+  - BK2
+  - "volume local-ai-ollama (optionnel : modèles re-téléchargeables)"
+destination: backups/volumes
+integrity: "sha256 (SHA256SUMS.txt + manifest)"
+secrets: "jamais copiés en clair"
+quota_local_gib: 10
+automatic_deletion_of_critical: false

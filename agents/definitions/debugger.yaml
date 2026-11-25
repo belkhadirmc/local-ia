@@ -1,0 +1,36 @@
+# Agent Debugger — définition indépendante d'OpenCode.
+schema: local-ai/agent/v1
+id: debugger
+name: Debugger
+role: "Reproduit, diagnostique et corrige les anomalies."
+model:
+  ref: qwen2.5-coder-14b
+  confirmed: false
+  note: "à confirmer après benchmarks"
+instructions: ../prompts/debugger.md
+permissions:
+  baseline_profile: S2
+  read: allow
+  edit: ask
+  bash: ask
+  network: deny
+  mcp: ask
+tools:
+  - read
+  - grep
+  - glob
+  - edit
+  - bash
+  - test
+  - git-read
+delegation:
+  can_delegate_to:
+    - qa
+  max_depth: 1
+mcp:
+  authorizable:
+    - jira
+  enabled: []
+opencode:
+  export: "à générer depuis cette définition"
+  status: not_converted

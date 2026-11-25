@@ -1,0 +1,25 @@
+# Profil de sécurité S3.
+schema: local-ai/profile/security/v1
+id: S3
+name: controlled-autonomous
+description: "Autonome contrôlé : modifications et commandes dans le workspace du projet ; actions destructrices, réseau et MCP soumis à validation."
+permissions:
+  read: allow
+  edit: allow
+  bash: allow
+  network: ask
+  mcp: ask
+  delegation: allow
+always_ask:
+  - "suppression de fichiers"
+  - "git push"
+  - "commandes hors workspace"
+  - "modification de secrets/"
+always_deny:
+  - "socket Docker"
+  - "conteneur privileged"
+  - "network_mode host"
+  - "montage global Windows"
+limits:
+  workspace_only: true
+  max_delegation_depth: 2

@@ -1,0 +1,19 @@
+# SURCHARGE — exposition de opencode sur 127.0.0.1:4096 uniquement (si nécessaire).
+# Un réseau interne ne permet pas la publication de ports : un pont dédié sans NAT sortant
+# (enable_ip_masquerade=false) est utilisé. Comportement à tester lors du déploiement.
+services:
+  opencode:
+    networks: [local-ai-core, local-ai-localhost]
+    ports:
+      - "127.0.0.1:4096:4096"
+
+networks:
+  local-ai-localhost:
+    name: local-ai-localhost
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: "false"
+      com.docker.network.bridge.host_binding_ipv4: "127.0.0.1"
+    labels:
+      local-ai.network: localhost
+      local-ai.authorization: required

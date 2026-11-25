@@ -1,0 +1,29 @@
+# Autocomplétion Continue — chargée à la demande (un seul modèle chargé à la fois).
+schema: local-ai/agent/v1
+id: autocomplete
+name: "Autocomplétion"
+role: "Autocomplétion de code dans VS Code via Continue, à la demande."
+type: continue-autocomplete
+on_demand: true
+model:
+  ref: qwen2.5-coder-1.5b
+  confirmed: false
+  note: "à confirmer après benchmarks"
+instructions: ../prompts/autocomplete.md
+permissions:
+  baseline_profile: S2
+  read: allow
+  edit: deny
+  bash: deny
+  network: deny
+  mcp: deny
+tools: []
+delegation:
+  can_delegate_to: []
+  max_depth: 0
+mcp:
+  authorizable: []
+  enabled: []
+continue:
+  config_template: ../../config/continue/config.template.yaml
+  status: not_installed

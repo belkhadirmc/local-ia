@@ -1,0 +1,13 @@
+# FRAGMENT DE RÉFÉRENCE — à recopier dans chaque nouveau service (les ancres YAML ne traversent pas include).
+# Base de sécurité : non-root si compatible, Seccomp par défaut, cap_drop ALL,
+# no-new-privileges, lecture seule si compatible. Interdits : socket Docker,
+# privileged, network_mode host, montage global de lecteurs Windows.
+x-local-ai-security-baseline:
+  user: "${LOCAL_AI_UID:-1000}:${LOCAL_AI_GID:-1000}"
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m
+  cap_drop: [ALL]
+  security_opt:
+    - no-new-privileges:true
+  restart: "no"

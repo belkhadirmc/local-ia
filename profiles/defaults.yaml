@@ -1,0 +1,33 @@
+# Profils par défaut : état SOUHAITÉ vs état RÉELLEMENT APPLIQUÉ. Aucun changement WSL2 effectué en 3.B.1.
+schema: local-ai/profile-defaults/v1
+desired:
+  performance: B
+  network: N1
+  security: S2
+  backup: BK1
+applied:
+  performance:
+    profile: B
+    status: applied
+    source: "%USERPROFILE%\\.wslconfig"
+    verified: "2026-11-25 (action 2.B.5)"
+    measured:
+      cpus: 8
+      memory_gib: 23.47
+      swap_gib: 8
+  network:
+    profile: null
+    status: not_applied
+    reason: "aucun service déployé"
+  security:
+    profile: null
+    status: not_applied
+    reason: "aucun agent déployé"
+  backup:
+    profile: BK1
+    status: applied
+    restore_points:
+      - 2.B.1_20261125_164110
+      - 2.B.3_20261125_164653
+      - 2.B.3.1_20261125_165143
+note: "État appliqué renseigné manuellement ; à automatiser via local-ai.ps1 profile (non implémenté)."

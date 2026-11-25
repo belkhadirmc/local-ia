@@ -1,0 +1,12 @@
+# SURCHARGE SUR AUTORISATION — réseau local-ai-egress : maintenance (téléchargements autorisés manuellement).
+# Profil réseau requis : N2. Usage : docker compose -f compose.yaml -f compose/overrides/egress.yaml ...
+# Un service n'obtient ce réseau que s'il le déclare explicitement dans une surcharge dédiée.
+networks:
+  local-ai-egress:
+    name: local-ai-egress
+    driver: bridge
+    internal: false
+    labels:
+      local-ai.network: egress
+      local-ai.authorization: required
+      local-ai.profile: N2

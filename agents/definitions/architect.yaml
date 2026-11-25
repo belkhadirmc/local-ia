@@ -1,0 +1,40 @@
+# Agent Architecte — définition indépendante d'OpenCode.
+schema: local-ai/agent/v1
+id: architect
+name: Architecte
+role: "Conçoit l'architecture, découpe les tâches et délègue."
+model:
+  ref: gpt-oss-20b
+  confirmed: false
+  note: "à confirmer après benchmarks"
+instructions: ../prompts/architect.md
+permissions:
+  baseline_profile: S2
+  read: allow
+  edit: deny
+  bash: deny
+  network: deny
+  mcp: ask
+tools:
+  - read
+  - grep
+  - glob
+  - git-read
+delegation:
+  can_delegate_to:
+    - developer
+    - devops
+    - reviewer
+    - security
+    - documentalist
+  max_depth: 1
+mcp:
+  authorizable:
+    - github
+    - gitlab
+    - jira
+    - confluence
+  enabled: []
+opencode:
+  export: "à générer depuis cette définition"
+  status: not_converted

@@ -1,0 +1,18 @@
+# Permissions MCP Jira (appliquées seulement si le serveur est activé).
+schema: local-ai/mcp-permissions/v1
+server: jira
+default: deny
+allow_when_enabled:
+  - issues.read
+  - search
+ask:
+  - issues.comment
+  - issues.transition
+deny:
+  - issues.delete
+  - admin
+agents_allowed:
+  - architect
+  - developer
+  - debugger
+  - qa

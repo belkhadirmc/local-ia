@@ -1,0 +1,37 @@
+# Agent DevOps — définition indépendante d'OpenCode.
+schema: local-ai/agent/v1
+id: devops
+name: DevOps
+role: "Gère Compose, CI, scripts et configuration d'exécution."
+model:
+  ref: qwen3-coder-30b
+  confirmed: false
+  note: "à confirmer après benchmarks"
+instructions: ../prompts/devops.md
+permissions:
+  baseline_profile: S2
+  read: allow
+  edit: ask
+  bash: ask
+  network: deny
+  mcp: ask
+tools:
+  - read
+  - grep
+  - glob
+  - edit
+  - write
+  - bash
+  - git-read
+delegation:
+  can_delegate_to:
+    - security
+  max_depth: 1
+mcp:
+  authorizable:
+    - github
+    - gitlab
+  enabled: []
+opencode:
+  export: "à générer depuis cette définition"
+  status: not_converted

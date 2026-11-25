@@ -1,0 +1,15 @@
+# Profil réseau N2.
+schema: local-ai/profile/network/v1
+id: N2
+name: maintenance
+description: "Maintenance : téléchargements et mises à jour sur fenêtre manuelle."
+allowed_networks:
+  - local-ai-core
+  - "local-ai-project-*"
+  - local-ai-egress
+authorization: manual
+ollama:
+  OLLAMA_NO_CLOUD: 1
+forbidden:
+  - "network_mode: host"
+  - "ports hors 127.0.0.1"

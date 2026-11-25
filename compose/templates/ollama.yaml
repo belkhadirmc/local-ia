@@ -1,0 +1,37 @@
+# MODÈLE INACTIF — Ollama (CPU). Activation : image épinglée (version + digest), volume
+# local-ai-ollama provisionné, profil B appliqué, benchmarks. Double garde : profile "ollama"
+# + variable OLLAMA_IMAGE obligatoire (aucune image par défaut).
+# Non-root : à valider avec l'image retenue (OLLAMA_MODELS + droits du volume).
+services:
+  ollama:
+    image: ${OLLAMA_IMAGE:?OLLAMA_IMAGE doit etre epinglee (nom:version@sha256)}
+    profiles: [ollama]
+    restart: "no"
+    env_file:
+      - path: ../../config/ollama/ollama.env
+        required: true
+    networks: [local-ai-core]
+    volumes:
+      - local-ai-ollama:/root/.ollama
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    expose:
+      - "11434"
+
+networks:
+  local-ai-core:
+    name: local-ai-core
+    driver: bridge
+    internal: true
+    labels:
+      local-ai.network: core
+      local-ai.authorization: none
+
+volumes:
+  local-ai-ollama:
+    name: local-ai-ollama
+    external: true

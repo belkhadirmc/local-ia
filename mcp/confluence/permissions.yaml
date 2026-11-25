@@ -1,0 +1,15 @@
+# Permissions MCP Confluence (appliquées seulement si le serveur est activé).
+schema: local-ai/mcp-permissions/v1
+server: confluence
+default: deny
+allow_when_enabled:
+  - pages.read
+  - search
+ask:
+  - pages.write
+deny:
+  - pages.delete
+  - admin
+agents_allowed:
+  - architect
+  - documentalist

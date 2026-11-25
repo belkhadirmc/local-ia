@@ -1,0 +1,15 @@
+# Profil réseau N4.
+schema: local-ai/profile/network/v1
+id: N4
+name: mcp-external
+description: "MCP externes autorisés : serveurs explicitement listés uniquement."
+allowed_networks:
+  - local-ai-core
+  - "local-ai-project-*"
+  - local-ai-mcp
+authorization: explicit_allowlist
+ollama:
+  OLLAMA_NO_CLOUD: 1
+forbidden:
+  - "network_mode: host"
+  - "ports hors 127.0.0.1"

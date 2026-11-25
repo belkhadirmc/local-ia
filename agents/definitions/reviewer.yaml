@@ -1,0 +1,33 @@
+# Agent Reviewer — définition indépendante d'OpenCode.
+schema: local-ai/agent/v1
+id: reviewer
+name: Reviewer
+role: "Relit le code et les diffs, signale défauts et risques sans modifier."
+model:
+  ref: gpt-oss-20b
+  confirmed: false
+  note: "à confirmer après benchmarks"
+instructions: ../prompts/reviewer.md
+permissions:
+  baseline_profile: S2
+  read: allow
+  edit: deny
+  bash: deny
+  network: deny
+  mcp: ask
+tools:
+  - read
+  - grep
+  - glob
+  - git-read
+delegation:
+  can_delegate_to: []
+  max_depth: 1
+mcp:
+  authorizable:
+    - github
+    - gitlab
+  enabled: []
+opencode:
+  export: "à générer depuis cette définition"
+  status: not_converted

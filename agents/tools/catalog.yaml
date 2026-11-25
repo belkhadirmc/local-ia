@@ -1,0 +1,36 @@
+# Catalogue des outils agents (indépendant d'OpenCode).
+schema: local-ai/tools/v1
+tools:
+  - id: read
+    risk: low
+    description: "lecture de fichiers du workspace"
+  - id: grep
+    risk: low
+    description: "recherche de contenu"
+  - id: glob
+    risk: low
+    description: "recherche de fichiers"
+  - id: edit
+    risk: medium
+    description: "modification de fichiers existants"
+  - id: write
+    risk: medium
+    description: "création de fichiers"
+  - id: bash
+    risk: high
+    description: "commandes shell dans le conteneur"
+  - id: test
+    risk: medium
+    description: "exécution des tests du projet"
+  - id: git-read
+    risk: low
+    description: "status, diff, log"
+  - id: git-write
+    risk: high
+    description: "commit, branch (push toujours soumis à validation)"
+  - id: webfetch
+    risk: high
+    description: "accès web — refusé en N1"
+  - id: mcp
+    risk: high
+    description: "appel d'un serveur MCP autorisé (N4)"

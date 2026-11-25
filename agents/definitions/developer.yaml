@@ -1,0 +1,40 @@
+# Agent Développeur — définition indépendante d'OpenCode.
+schema: local-ai/agent/v1
+id: developer
+name: "Développeur"
+role: "Implémente les fonctionnalités demandées avec tests."
+model:
+  ref: qwen3-coder-30b
+  confirmed: false
+  note: "à confirmer après benchmarks"
+instructions: ../prompts/developer.md
+permissions:
+  baseline_profile: S2
+  read: allow
+  edit: ask
+  bash: ask
+  network: deny
+  mcp: ask
+tools:
+  - read
+  - grep
+  - glob
+  - edit
+  - write
+  - bash
+  - test
+  - git-read
+delegation:
+  can_delegate_to:
+    - qa
+    - debugger
+  max_depth: 1
+mcp:
+  authorizable:
+    - github
+    - gitlab
+    - jira
+  enabled: []
+opencode:
+  export: "à générer depuis cette définition"
+  status: not_converted
