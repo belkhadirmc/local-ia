@@ -2,7 +2,7 @@
 # Aucun serveur concret : image, transport et identifiants à définir dans mcp/<serveur>/.
 services:
   mcp-server:
-    image: ${MCP_SERVER_IMAGE:?MCP_SERVER_IMAGE doit etre epinglee}
+    image: ${MCP_SERVER_IMAGE_REPO:?MCP_SERVER_IMAGE_REPO requis}:${MCP_SERVER_IMAGE_TAG:?MCP_SERVER_IMAGE_TAG requis (version explicite)}@sha256:${MCP_SERVER_IMAGE_SHA256:?MCP_SERVER_IMAGE_SHA256 requis (64 hex)}
     profiles: [mcp]
     restart: "no"
     user: "${LOCAL_AI_UID:-1000}:${LOCAL_AI_GID:-1000}"

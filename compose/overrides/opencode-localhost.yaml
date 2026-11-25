@@ -1,6 +1,9 @@
 # SURCHARGE — exposition de opencode sur 127.0.0.1:4096 uniquement (si nécessaire).
 # Un réseau interne ne permet pas la publication de ports : un pont dédié sans NAT sortant
 # (enable_ip_masquerade=false) est utilisé. Comportement à tester lors du déploiement.
+# AVERTISSEMENT : la liaison 127.0.0.1 limite l'EXPOSITION entrante ; elle ne garantit PAS le blocage
+# d'Internet en sortie. Le blocage sortant repose sur enable_ip_masquerade=false (non testé) et sur l'absence
+# des réseaux egress/cloud/mcp. Désactivée par défaut : n'est appliquée que via -f explicite.
 services:
   opencode:
     networks: [local-ai-core, local-ai-localhost]

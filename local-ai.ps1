@@ -143,6 +143,20 @@ function Test-Config {
             Add-Result 'Garde image obligatoire (doit échouer)' $(if ($r.Code -ne 0 -and $r.Output -match 'required variable') { 'PASS' } else { 'FAIL' }) ''
         }
 
+        # 2b. Épinglage réel : structure dépôt:version@sha256 dans les modèles + format des valeurs définies
+        $pinRe = '^\s*image:\s*\$\{(\w+)_IMAGE_REPO:\?[^}]*\}:\$\{\1_IMAGE_TAG:\?[^}]*\}@sha256:\$\{\1_IMAGE_SHA256:\?[^}]*\}\s*$'
+        $imgLines = @(Select-String -Path compose\templates\*.yaml -Pattern '^\s*image:')
+        $badPin = @($imgLines | Where-Object { $_.Line -notmatch $pinRe } | ForEach-Object { $_.Filename })
+        Add-Result ("Modèles : structure dépôt:version@sha256 ({0})" -f $imgLines.Count) $(if ($badPin -or -not $imgLines) { 'FAIL' } else { 'PASS' }) ($badPin -join ', ')
+        $vals = @{}
+        if (Test-Path .env) { Get-Content .env | Where-Object { $_ -match '^\s*(\w+_IMAGE_(TAG|SHA256))=(.*)$' } | ForEach-Object { $vals[$Matches[1]] = $Matches[3].Trim() } }
+        Get-ChildItem env: | Where-Object { $_.Name -match '_IMAGE_(TAG|SHA256)$' } | ForEach-Object { $vals[$_.Name] = $_.Value }
+        $badVal = @($vals.Keys | Where-Object {
+            ($_ -like '*_SHA256' -and $vals[$_] -notmatch '^[0-9a-f]{64}$') -or ($_ -like '*_TAG' -and ($vals[$_] -eq '' -or $vals[$_] -match '^(latest|stable|main|edge)$'))
+        })
+        if ($vals.Count -eq 0) { Add-Result 'Valeurs d''épinglage (digest 64 hex, tag explicite)' 'NON APPLICABLE' 'aucune image définie' }
+        else { Add-Result 'Valeurs d''épinglage (digest 64 hex, tag explicite)' $(if ($badVal) { 'FAIL' } else { 'PASS' }) ($badVal -join ', ') }
+
         # 3. Interdits dans Compose
         $composeText = (Get-ChildItem compose, tests\integration -Recurse -File -Include *.yaml | Get-Content -Raw) -join "`n"
         $forbidden = @('docker\.sock', 'privileged:\s*true', 'network_mode:\s*"?host', 'seccomp[:=]unconfined', '^\s*-\s*"?[A-Za-z]:\\', '"0\.0\.0\.0:')

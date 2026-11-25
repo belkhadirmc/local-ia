@@ -1,10 +1,11 @@
 # MODÈLE INACTIF — Ollama (CPU). Activation : image épinglée (version + digest), volume
 # local-ai-ollama provisionné, profil B appliqué, benchmarks. Double garde : profile "ollama"
-# + variable OLLAMA_IMAGE obligatoire (aucune image par défaut).
+# + référence imposée dépôt:version@sha256 (aucune image par défaut). Format du digest et
+# refus de "latest" contrôlés par local-ai.ps1 config (Compose ne valide pas le format).
 # Non-root : à valider avec l'image retenue (OLLAMA_MODELS + droits du volume).
 services:
   ollama:
-    image: ${OLLAMA_IMAGE:?OLLAMA_IMAGE doit etre epinglee (nom:version@sha256)}
+    image: ${OLLAMA_IMAGE_REPO:?OLLAMA_IMAGE_REPO requis}:${OLLAMA_IMAGE_TAG:?OLLAMA_IMAGE_TAG requis (version explicite)}@sha256:${OLLAMA_IMAGE_SHA256:?OLLAMA_IMAGE_SHA256 requis (64 hex)}
     profiles: [ollama]
     restart: "no"
     env_file:

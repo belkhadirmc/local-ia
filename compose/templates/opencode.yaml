@@ -2,7 +2,7 @@
 # chemins de données confirmés, volume local-ai-opencode provisionné, agents convertis.
 services:
   opencode:
-    image: ${OPENCODE_IMAGE:?OPENCODE_IMAGE doit etre epinglee ou construite localement}
+    image: ${OPENCODE_IMAGE_REPO:?OPENCODE_IMAGE_REPO requis}:${OPENCODE_IMAGE_TAG:?OPENCODE_IMAGE_TAG requis (version explicite)}@sha256:${OPENCODE_IMAGE_SHA256:?OPENCODE_IMAGE_SHA256 requis (64 hex)}
     profiles: [opencode]
     restart: "no"
     user: "${LOCAL_AI_UID:-1000}:${LOCAL_AI_GID:-1000}"

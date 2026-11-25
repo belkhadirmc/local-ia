@@ -2,6 +2,11 @@
 secrets/*
 !secrets/.gitkeep
 !secrets/README.md
+# secrets imbriqués (tout niveau sous la racine)
+*/**/secrets/
+.secrets/
+*.secret
+*.secrets.*
 .env
 .env.*
 *.env
