@@ -1,66 +1,96 @@
-# Registre des modèles — AUCUN modèle téléchargé. Tags, digest et taille à relever lors du pull
-# (aucune valeur inventée). Affectations à confirmer après benchmarks (models/benchmarks/).
+# Registre des modèles — téléchargés et testés hors ligne en 5.B.1 (2026-11-25).
+# digest = sha256 du manifeste officiel (registry.ollama.ai), vérifié localement (manifests-v2) ; id = 12 premiers caractères.
+# size_gib = somme des couches déclarées par le manifeste. Test : contexte 2048, réponse courte, keep_alive 0, CPU, réseau N1.
+# Affectations aux agents NON confirmées : à confirmer après benchmarks (models/benchmarks/).
 schema: local-ai/models/v1
 runtime: ollama
+runtime_image: "ollama/ollama:0.40.18@sha256:4e0d5daa6c5cd91e27011977031466844c5ea4ba2393b35e78068835edec040b"
 policy:
   concurrent_inferences: 1
   loaded_models: 1
   default_context: 8192
   no_cloud: true
+  budget_gib: 58
+  ssd_reserve_min_gib: 30
+pulled:
+  window: "N2 temporaire (conteneur et réseau supprimés), 2026-11-25"
+  total_size_gib: 52.98
 models:
-  - id: gpt-oss-20b
-    tag: gpt-oss:20b
-    usage: "raisonnement, architecture, revue, sécurité"
-    status: not_pulled
-    tag_verified: false
-    digest: null
-    size_gib: null
-    fits_profile_B: to_benchmark
-  - id: qwen3-coder-30b
-    tag: qwen3-coder:30b
-    usage: "génération de code, DevOps"
-    status: not_pulled
-    tag_verified: false
-    digest: null
-    size_gib: null
-    fits_profile_B: to_benchmark
-  - id: qwen2.5-coder-14b
-    tag: qwen2.5-coder:14b
-    usage: "débogage"
-    status: not_pulled
-    tag_verified: false
-    digest: null
-    size_gib: null
-    fits_profile_B: to_benchmark
-  - id: qwen2.5-coder-7b
-    tag: qwen2.5-coder:7b
-    usage: "tests et QA"
-    status: not_pulled
-    tag_verified: false
-    digest: null
-    size_gib: null
-    fits_profile_B: to_benchmark
-  - id: qwen3.5-9b
-    tag: qwen3.5:9b
-    usage: documentation
-    status: not_pulled
-    tag_verified: false
-    digest: null
-    size_gib: null
-    fits_profile_B: to_benchmark
-  - id: qwen3.5-4b
-    tag: qwen3.5:4b
-    usage: "assistant généraliste léger"
-    status: not_pulled
-    tag_verified: false
-    digest: null
-    size_gib: null
-    fits_profile_B: to_benchmark
   - id: qwen2.5-coder-1.5b
     tag: qwen2.5-coder:1.5b
     usage: "autocomplétion Continue à la demande"
-    status: not_pulled
-    tag_verified: false
-    digest: null
-    size_gib: null
-    fits_profile_B: to_benchmark
+    status: pulled
+    tag_verified: true
+    digest: "sha256:d7372fd828518a4d38b1eb196c673c31a85f2ed302b3d1e406c4c2d1b64a0668"
+    ollama_id: d7372fd82851
+    size_gib: 0.92
+    offline_test: PASS
+    test: {load_s: 4.6, total_s: 5.1, tok_per_s: 30.4, max_vm_used_gib: 1.54}
+    fits_profile_B: true
+  - id: qwen3.5-4b
+    tag: qwen3.5:4b-q4_K_M
+    usage: "assistant généraliste léger"
+    status: pulled
+    tag_verified: true
+    digest: "sha256:d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04"
+    ollama_id: d8b0f5e9760c
+    size_gib: 3.1
+    offline_test: PASS
+    test: {load_s: 7.4, total_s: 8.5, tok_per_s: 9.8, max_vm_used_gib: 3.83, think: false}
+    fits_profile_B: true
+  - id: qwen2.5-coder-7b
+    tag: qwen2.5-coder:7b
+    usage: "tests et QA"
+    status: pulled
+    tag_verified: true
+    digest: "sha256:dae161e27b0e90dd1856c8bb3209201fd6736d8eb66298e75ed87571486f4364"
+    ollama_id: dae161e27b0e
+    size_gib: 4.36
+    offline_test: PASS
+    test: {load_s: 12.4, total_s: 14.7, tok_per_s: 7.6, max_vm_used_gib: 5.48}
+    fits_profile_B: true
+  - id: qwen3.5-9b
+    tag: qwen3.5:9b-q4_K_M
+    usage: documentation
+    status: pulled
+    tag_verified: true
+    digest: "sha256:56671c2ab9385f9cfcb404638e32cd62d88e3501d44822208363c010179a3c90"
+    ollama_id: 56671c2ab938
+    size_gib: 6.1
+    offline_test: PASS
+    test: {load_s: 15.8, total_s: 17.8, tok_per_s: 6.4, max_vm_used_gib: 7.39, think: false}
+    fits_profile_B: true
+  - id: qwen2.5-coder-14b
+    tag: qwen2.5-coder:14b
+    usage: "débogage"
+    status: pulled
+    tag_verified: true
+    digest: "sha256:9ec8897f747e246e970bc5cfdda85d22f1123dc2e3d34978a010a75968716849"
+    ollama_id: 9ec8897f747e
+    size_gib: 8.37
+    offline_test: PASS
+    test: {load_s: 26.8, total_s: 31.5, tok_per_s: 5.3, max_vm_used_gib: 9.82}
+    fits_profile_B: true
+  - id: gpt-oss-20b
+    tag: gpt-oss:20b
+    usage: "raisonnement, architecture, revue, sécurité"
+    status: pulled
+    tag_verified: true
+    digest: "sha256:f38aa0c53da5f8c49d08c43a99df24ff53167fe68e24664a7777288e7656fdfe"
+    ollama_id: f38aa0c53da5
+    size_gib: 12.85
+    offline_test: PASS
+    test: {load_s: 22.8, total_s: 29.1, tok_per_s: 6.8, max_vm_used_gib: 14.04, think: low}
+    fits_profile_B: true
+  - id: qwen3-coder-30b
+    tag: qwen3-coder:30b
+    usage: "génération de code, DevOps"
+    status: pulled
+    tag_verified: true
+    digest: "sha256:06c1097efce0431c2045fe7b2e5108366e43bee1b4603a7aded8f21689e90bca"
+    ollama_id: 06c1097efce0
+    size_gib: 17.28
+    offline_test: PASS
+    test: {load_s: 34.8, total_s: 35.6, tok_per_s: 17.0, max_vm_used_gib: 18.53}
+    fits_profile_B: "true (contexte 2048 testé ; 8192 à valider : 78,9 % de RAM WSL2 au test)"
+    note: "config blob : taille déclarée 539 o, réelle 542 o (contenu conforme à son digest) — écart du manifeste amont"

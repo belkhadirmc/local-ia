@@ -39,5 +39,8 @@ modules:
     platform: linux/amd64
     volume: local-ai-ollama
     models_loaded: 0
-    verified: "2026-11-25 (action 4.B.1)"
+    models_available: 7
+    models_size_gib: 52.98
+    models_tested_offline: "7/7 PASS (5.B.1)"
+    verified: "2026-11-25 (actions 4.B.1, 5.B.1)"
 note: "État appliqué renseigné manuellement ; à automatiser via local-ai.ps1 profile (non implémenté)."

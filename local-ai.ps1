@@ -21,6 +21,7 @@ $Implemented = [ordered]@{
     'config' = 'Valide YAML, Compose, références agents/modèles, MCP, exclusions Git'
     'start'  = 'Démarre un module activé (défaut : ollama) après validation ; aucun téléchargement implicite'
     'stop'   = 'Arrête un module (défaut : ollama) sans supprimer conteneurs, réseau ni volume'
+    'model'  = 'model list | model show <tag> (lecture seule ; pull/rm NON IMPLÉMENTÉS)'
 }
 # Modules démarrables : profil Compose, image (variables .env), volumes externes requis
 $Modules = @{
@@ -28,7 +29,6 @@ $Modules = @{
 }
 $Planned = [ordered]@{
     'profile'        = 'Afficher / appliquer un profil (A-C, N1-N4, S1-S4, BK1-BK3)'
-    'model'          = 'Gérer les modèles Ollama'
     'agent'          = 'Gérer les agents'
     'mcp'            = 'Activer / désactiver les serveurs MCP'
     'monitor'        = 'Supervision selon config/monitoring/thresholds.yaml'
@@ -283,8 +283,57 @@ function Stop-Module {
     } finally { Pop-Location }
 }
 
+function Get-OllamaContainer {
+    if (-not (Test-DockerEngine)) { throw 'Docker Engine indisponible.' }
+    $id = (Invoke-Native docker @('compose', '-f', (Join-Path $Root 'compose.yaml'), '--profile', 'ollama', 'ps', '-q', '--status', 'running', 'ollama')).Output.Trim()
+    if (-not $id) { throw "Ollama n'est pas démarré (.\local-ai.ps1 start)." }
+    $id
+}
+
+function Get-RegistryModels {
+    $text = Get-Content (Join-Path $Root 'models\registry.yaml') -Raw -Encoding UTF8
+    $blocks = [regex]::Split($text, '(?m)^\s*-\s+id:\s*') | Select-Object -Skip 1
+    foreach ($b in $blocks) {
+        $get = { param($k) $m = [regex]::Match($b, '(?m)^\s+' + $k + ':\s*"?([^"\r\n]*)"?'); if ($m.Success) { $m.Groups[1].Value.Trim() } else { $null } }
+        [pscustomobject]@{ Id = ($b -split '\s')[0]; Tag = (& $get 'tag'); Status = (& $get 'status'); Test = (& $get 'offline_test') }
+    }
+}
+
+function Invoke-Model {
+    param([string[]]$Args0)
+    $sub = if ($Args0 -and $Args0[0]) { $Args0[0].ToLowerInvariant() } else { 'list' }
+    switch ($sub) {
+        'list' {
+            $c = Get-OllamaContainer
+            $reg = @(Get-RegistryModels)
+            $live = (Invoke-Native docker @('exec', $c, '/bin/ollama', 'list')).Output -split "`n" | Select-Object -Skip 1 | Where-Object { $_.Trim() }
+            $rows = foreach ($l in $live) {
+                $f = $l -split '\s{2,}'
+                $r = $reg | Where-Object Tag -eq $f[0] | Select-Object -First 1
+                [pscustomobject]@{ Tag = $f[0]; ID = $f[1]; Size = $f[2]; Registre = $(if ($r) { $r.Id } else { 'NON RÉFÉRENCÉ' }); Statut = $(if ($r) { $r.Status } else { '' }); Test = $(if ($r) { $r.Test } else { '' }) }
+            }
+            $liveTags = @($rows | ForEach-Object { $_.Tag })
+            $missing = @($reg | Where-Object { $liveTags -notcontains $_.Tag } | ForEach-Object { $_.Tag })
+            $rows | Format-Table -AutoSize | Out-String -Width 200 | Write-Output
+            Write-Output ("Chargés : {0}" -f @((Invoke-Native docker @('exec', $c, '/bin/ollama', 'ps')).Output -split "`n" | Select-Object -Skip 1 | Where-Object { $_.Trim() }).Count)
+            if ($missing) { Write-Output ("Référencés absents : {0}" -f ($missing -join ', ')) }
+        }
+        'show' {
+            if (-not $Args0 -or $Args0.Count -lt 2) { throw 'Usage : .\local-ai.ps1 model show <tag>' }
+            $tag = $Args0[1]
+            if (-not (@(Get-RegistryModels) | Where-Object Tag -eq $tag)) { throw "Modèle '$tag' absent de models/registry.yaml." }
+            $c = Get-OllamaContainer
+            $r = Invoke-Native docker @('exec', $c, '/bin/ollama', 'show', $tag)
+            if ($r.Code -ne 0) { throw "ollama show a échoué : $($r.Output)" }
+            Write-Output $r.Output
+        }
+        default { Write-Error ("Sous-commande 'model {0}' NON IMPLÉMENTÉE (disponibles : list, show)." -f $sub) -ErrorAction Continue; exit 2 }
+    }
+}
+
 switch ($Command.ToLowerInvariant()) {
     'help'   { Show-Help; exit 0 }
+    'model'  { try { Invoke-Model $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
     'status' { Show-Status; exit 0 }
     'config' { Test-Config; exit 0 }
     'start'  { try { Start-Module $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }

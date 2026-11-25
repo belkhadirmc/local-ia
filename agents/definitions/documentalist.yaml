@@ -7,6 +7,7 @@ model:
   ref: qwen3.5-9b
   confirmed: false
   note: "à confirmer après benchmarks"
+  tag: qwen3.5:9b-q4_K_M
 instructions: ../prompts/documentalist.md
 permissions:
   baseline_profile: S2
