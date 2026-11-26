@@ -127,6 +127,13 @@ services:
         source: ../../config/opencode/agent-shell.sh
         target: /etc/local-ai/agent-shell
         read_only: true
+      # 14.B.2 (R30) : Python et Git isolés, épinglés (config/tools/lock.txt), volume en lecture seule, sans réseau (N1)
+      - type: volume
+        source: local-ai-tools
+        target: /opt/local-ai-tools
+        read_only: true
+        volume:
+          nocopy: true
     read_only: true
     tmpfs:
       - /tmp:size=256m,uid=1000,gid=1000,mode=0700
@@ -178,4 +185,7 @@ volumes:
     external: true
   local-ai-active-workspace:
     name: local-ai-workspace-${LOCAL_AI_PROJECT:-none}
+    external: true
+  local-ai-tools:
+    name: local-ai-tools
     external: true

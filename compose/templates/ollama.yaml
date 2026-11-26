@@ -103,6 +103,15 @@ services:
         source: ../../config/gate/LocalAiJson.pm
         target: /etc/local-ai/LocalAiJson.pm
         read_only: true
+      # 14.B.2 : politique de repli (générée depuis config/agents/fallback.yaml) et sonde d'admission à blanc
+      - type: bind
+        source: ../../config/gate/fallback.json
+        target: /etc/local-ai/fallback.json
+        read_only: true
+      - type: bind
+        source: ../../config/gate/admit.pl
+        target: /etc/local-ai/admit.pl
+        read_only: true
       - type: bind
         source: ../../runtime/state
         target: /run/local-ai/state

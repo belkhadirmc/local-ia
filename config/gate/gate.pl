@@ -28,6 +28,7 @@ my $STALE    = $ENV{GATE_HOST_STALE_S} // 20;
 my $QUEUE    = $ENV{GATE_QUEUE_S} // 900;
 my $ABORT_S  = $ENV{GATE_ABORT_AFTER_S} // 3;
 my $ADMIT_WAIT = $ENV{GATE_ADMIT_WAIT_S} // 20;
+my $FALLBACK = $ENV{GATE_FALLBACK} // '/etc/local-ai/fallback.json';
 my $VM_MIN   = 0.5;
 my $LOCK     = '/tmp/local-ai-gate.lock';
 my $MAX_BODY = 32 * 1024 * 1024;
@@ -79,9 +80,41 @@ sub host_ram {
     my $h = eval { decode_json($t) } or return undef;
     my $age = time - n($h->{ts_unix});
     return undef if $age > $STALE || $age < -$STALE;
-    return { free => n($h->{win_free_gib}), total => n($h->{win_total_gib}), age => $age };
+    return { free => n($h->{win_free_gib}), total => n($h->{win_total_gib}), age => $age, simulated => (ref $h->{simulated} eq 'SCALAR' && ${ $h->{simulated} }) };
 }
 sub emergency { -e "$STATE/emergency.json" }
+# --- 14.B.2 : politique de repli (config/gate/fallback.json, généré depuis config/agents/fallback.yaml)
+sub fallback_cfg {
+    open my $f, '<', $FALLBACK or return { agents => {}, tools_incompatible => [] }; local $/; my $t = <$f>; close $f;
+    $t =~ s/\A\xEF\xBB\xBF//; my $v = eval { decode_json($t) }; return ref $v eq 'HASH' ? $v : { agents => {}, tools_incompatible => [] };
+}
+sub policy { my ($a) = @_; my $p = fallback_cfg()->{agents}{$a}; return ref $p eq 'HASH' ? $p : undef }
+sub tools_ok { my ($m) = @_; return !grep { $_ eq $m } @{ fallback_cfg()->{tools_incompatible} || [] } }
+sub agent_of {
+    # Marqueur « [local-ai agent=<id>] » ajouté par le générateur à chaque prompt système (variantes déléguées comprises).
+    my ($j) = @_; my @txt;
+    push @txt, $j->{system} if defined $j->{system} && !ref $j->{system};
+    for my $m (@{ ref $j->{messages} eq 'ARRAY' ? $j->{messages} : [] }) {
+        next unless ref $m eq 'HASH' && ($m->{role} // '') eq 'system';
+        my $c = $m->{content};
+        if (!ref $c) { push @txt, $c // '' } elsif (ref $c eq 'ARRAY') { push @txt, map { ref $_ eq 'HASH' ? ($_->{text} // '') : '' } @$c }
+    }
+    for (@txt) { return $1 if /\[local-ai agent=([a-z]+)\]/ }
+    return undef;
+}
+sub suggestion {
+    # Repli manuel assisté (Web/TUI) : premier modèle de la chaîne compatible outils et admis maintenant ; jamais de substitution ici.
+    my ($agent, $model, $after) = @_;
+    my $p = policy($agent) or return '';
+    return " — aucun repli (politique « off » de l'agent $agent)" if $p->{mode} eq 'off';
+    for my $cand (@{ $p->{chain} || [] }) {
+        next if $cand eq $model || !tools_ok($cand);
+        my ($ok) = admission($cand); next unless $ok;
+        my $how = ($after || $p->{mode} eq 'ask') ? 'sur confirmation, sans rejeu automatique' : 'avant exécution';
+        return " — REPLI PROPOSÉ ($how) : $agent -> $cand. Sélectionner ce modèle pour la session (Web/TUI) ou : local-ai.ps1 agent handoff $agent \"<consigne>\"" . ($p->{mode} eq 'ask' ? ' --accept-fallback' : '');
+    }
+    return " — aucun modèle de repli admissible pour $agent actuellement";
+}
 sub admission {
     my ($model) = @_;
     my $ps = jget('/api/ps') or return (0, 'Ollama injoignable');
@@ -148,6 +181,17 @@ sub handle {
         reply($c, 200, 'OK', $r, $path eq '/' ? 'text/plain' : 'application/json'); return;
     }
     my $infer = $INFER{$path};
+    if ($method eq 'POST' && $path eq '/local-ai/admission') {
+        # 14.B.2 : admission À BLANC (aucun verrou, aucune inférence) pour le repli avant exécution (local-ai.ps1 agent handoff).
+        my $b = read_body($c, \%h); alarm 0; my $q = eval { decode_json($b // '') };
+        return refuse($c, 400, 'Bad Request', 'JSON invalide', $path) unless ref $q eq 'HASH' && defined $q->{model} && !ref $q->{model};
+        return refuse($c, 403, 'Forbidden', "modèle hors registre local : $q->{model}", $path) unless $ALLOWED{ $q->{model} };
+        my ($ok, $why) = admission($q->{model}); my $h = host_ram();
+        my $r = encode_json({ model => $q->{model}, admitted => ($ok ? \1 : \0), reason => $why, tools_compatible => (tools_ok($q->{model}) ? \1 : \0),
+            simulated => (($h && $h->{simulated}) ? \1 : \0), emergency => (emergency() ? \1 : \0) });
+        logline("admission à blanc $q->{model} : " . ($ok ? 'admis' : 'refusé'));
+        return reply($c, 200, 'OK', $r);
+    }
     return refuse($c, 403, 'Forbidden', "opération non autorisée par la passerelle ($method $path)", $path) unless $method eq 'POST' && ($infer || $path eq '/api/show');
     my $body = read_body($c, \%h); alarm 0;
     return refuse($c, 413, 'Payload Too Large', 'corps absent, invalide ou > 32 Mio', $path) unless defined $body;
@@ -160,6 +204,14 @@ sub handle {
     if (!$infer) { my $r = upstream_raw('POST', $path, $body); return defined $r ? reply($c, 200, 'OK', $r) : refuse($c, 502, 'Bad Gateway', 'Ollama injoignable', $path) }
     if (is_unload($j)) { my $r = upstream_raw('POST', $path, $body); logline('déchargement'); return reply($c, 200, 'OK', $r // '{}') }
     return refuse($c, 400, 'Bad Request', "arrêt d'urgence actif (local-ai.ps1 emergency-stop clear)", $path) if emergency();
+    # --- 14.B.2 : incompatibilité d'outils AVÉRÉE (requête avec outils + modèle qui ne produit pas d'appels exploitables) :
+    # refus avant exécution avec suggestion de repli, sauf politique « off » de l'agent (comportement antérieur conservé).
+    my $agent = agent_of($j); my $pol = $agent ? policy($agent) : undef;
+    $REQ .= " {$agent}" if $agent;
+    if (ref $j->{tools} eq 'ARRAY' && @{ $j->{tools} } && !tools_ok($model)) {
+        if ($pol && $pol->{mode} ne 'off') { return refuse($c, 400, 'Bad Request', "outils incompatibles : $model ne produit pas d'appels d'outils exploitables (6.B.1/14.B.1)" . suggestion($agent, $model), $path) }
+        logline("avertissement : $model sans appels d'outils exploitables (politique off ou agent inconnu)");
+    }
 
     # --- exclusion mutuelle : une seule inférence à la fois, tous clients confondus
     open my $lk, '>>', $LOCK or return refuse($c, 500, 'Internal Server Error', 'verrou indisponible', $path);
@@ -180,7 +232,7 @@ sub handle {
         if (client_gone($c)) { logline('client parti pendant l\'admission'); return }
         select(undef, undef, undef, 2); ($ok, $why) = admission($model);
     }
-    return refuse($c, 400, 'Bad Request', "$why (refus après " . (time - $ta) . ' s)', $path) unless $ok;
+    return refuse($c, 400, 'Bad Request', "$why (refus après " . (time - $ta) . ' s)' . ($agent ? suggestion($agent, $model) : ''), $path) unless $ok;
     logline($why);
     # --- relais + RAM pendant
     my $u = IO::Socket::INET->new(PeerAddr => $UP, Proto => 'tcp', Timeout => 10) or return refuse($c, 502, 'Bad Gateway', 'Ollama injoignable', $path);
@@ -202,7 +254,8 @@ sub handle {
         if ($bad >= $ABORT_S) {
             close $u; unload($model);
             my $msg = sprintf('inférence interrompue : RAM sous le seuil pendant %d s (Windows %s Gio libres, WSL2 %.1f Gio disponibles) — modèle %s déchargé',
-                $bad, ($h ? sprintf('%.1f', $h->{free}) : '?'), $m->{MemAvailable} // 0, $model);
+                $bad, ($h ? sprintf('%.1f', $h->{free}) : '?'), $m->{MemAvailable} // 0, $model)
+                . ($agent ? suggestion($agent, $model, 1) : '');   # après démarrage : repli seulement sur confirmation, aucun rejeu
             if ($sent) { logline("ABANDON $msg") } else { refuse($c, 400, 'Bad Request', $msg, $path) }
             return;
         }

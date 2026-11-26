@@ -2,7 +2,10 @@
 
 Infrastructure de développement multi-agent locale : Docker Desktop (WSL2), Ollama, OpenCode, Continue, VS Code.
 **V1 100 % locale** : aucun modèle cloud, aucun basculement automatique ; N3 conservé comme point d'extension futur (ADR-0013).
-**V1 testée (14.B.1, ADR-0014)** : passerelle d'inférence unique devant Ollama (JSON strict, une inférence à la fois, garde RAM
+**V1 finalisée (14.B.2, ADR-0014)** : affectations initiales conservées, **repli local contrôlé** par tâche (`agent handoff`,
+`fallback list|check|mode` ; 20B/30B/14B -> 9B -> 4B, qa/documentaliste -> 4B, sécurité -> 9B sur confirmation ; Web/TUI : repli
+manuel assisté), **Python 3.14 et Git 2.54 isolés** pour les agents (`tools status|verify`) ; aucune réserve bloquante.
+**V1 testée (14.B.1)** : passerelle d'inférence unique devant Ollama (JSON strict, une inférence à la fois, garde RAM
 avant/pendant, 30B/20B/14B refusés si la RAM Windows n'est pas garantie), délégation **manuelle** (`agent handoff`), shell des agents
 sans mot de passe ; **apte pour un usage local séquentiel supervisé avec qwen3.5:4b** ; affectations à confirmer (R5, recommandations ADR-0014).
 État (13.B.1) : **Ollama 0.40.18** (CPU, réseau interne, aucun port publié) avec **7 modèles** (52,98 Gio, aucun chargé au repos, benchmarks 6.B.1) ;
@@ -53,7 +56,10 @@ profils A/B/C appliqués par `profile apply`, supervision légère `monitor`.
 .\local-ai.ps1 agent list                # agents, modèles, écarts à l'affectation initiale, avertissements outils/RAM
 .\local-ai.ps1 agent model <agent> [<modèle>]   # afficher / changer durablement (BK1 + rollback, OpenCode régénéré)
 .\local-ai.ps1 agent reset <agent|all>   # revenir aux affectations initiales (agents/assignments.initial.yaml)
-.\local-ai.ps1 agent handoff <agent> "<consigne>" [--model <tag>]   # transfert manuel vers un agent (nouvelle session, délégation auto désactivée)
+.\local-ai.ps1 agent handoff <agent> "<consigne>" [--accept-fallback] [--watch <s>] [--model <tag>]   # tâche avec repli contrôlé (nouvelle session)
+.\local-ai.ps1 fallback list | check <agent|all> | mode <agent> auto|ask|off   # politique de repli (journal runtime/logs/fallback.jsonl)
+.\local-ai.ps1 tools status | verify | install --confirm                      # Python/Git isolés et épinglés (volume local-ai-tools)
+.\local-ai.ps1 monitor simulate <Gio>|off                                     # seuils RAM simulés (tests, pessimistes uniquement)
 docker logs local-ai-ollama-gate-1       # décisions de la passerelle (admission RAM, refus, verrou, abandons)
 .\local-ai.ps1 profile list|show <A|B|C>         # profils de performance ; * = appliqué
 .\local-ai.ps1 profile apply <A|B|C> --confirm   # BK1 (.wslconfig comprise), redémarrage WSL2 si besoin, vérification, rollback

@@ -1,0 +1,25 @@
+# Repli LOCAL contrôlé des agents (14.B.2, ADR-0014). Source unique ; config/gate/fallback.json en est généré
+# (config/opencode/generate-config.ps1). Les affectations (agents/definitions, assignments.initial.yaml) ne changent JAMAIS :
+# le repli ne s'applique qu'à la session d'une tâche, et la tâche suivante repart du modèle initial.
+#   mode auto : avant exécution, premier modèle de la chaîne admis par la garde RAM et compatible outils (local-ai.ps1 agent handoff)
+#   mode ask  : repli proposé, appliqué seulement sur confirmation (--accept-fallback)
+#   mode off  : aucun repli (le modèle initial est utilisé ; la garde RAM peut le refuser)
+# Déclencheurs : RAM insuffisante (admission de la passerelle) ou incompatibilité d'outils avérée (tools_incompatible).
+# Jamais : rejeu automatique d'une action, boucle, contournement de la garde RAM, changement permanent d'affectation.
+schema: local-ai/agent-fallback/v1
+tools_incompatible:            # 6.B.1 : tools = 0 ; 14.B.1 : format d'appel non produit par le modèle (diagnostic ADR-0014)
+  - "qwen2.5-coder:1.5b"
+  - "qwen2.5-coder:7b"
+  - "qwen2.5-coder:14b"
+  - "qwen3-coder:30b"
+agents:
+  architect:     { mode: auto, chain: "qwen3.5:9b-q4_K_M,qwen3.5:4b-q4_K_M" }
+  developer:     { mode: auto, chain: "qwen3.5:9b-q4_K_M,qwen3.5:4b-q4_K_M" }
+  devops:        { mode: auto, chain: "qwen3.5:9b-q4_K_M,qwen3.5:4b-q4_K_M" }
+  debugger:      { mode: auto, chain: "qwen3.5:9b-q4_K_M,qwen3.5:4b-q4_K_M" }
+  reviewer:      { mode: auto, chain: "qwen3.5:9b-q4_K_M,qwen3.5:4b-q4_K_M" }
+  qa:            { mode: auto, chain: "qwen3.5:4b-q4_K_M" }
+  documentalist: { mode: auto, chain: "qwen3.5:4b-q4_K_M" }
+  security:      { mode: ask,  chain: "qwen3.5:9b-q4_K_M" }    # 20B -> 9B uniquement sur confirmation, jamais 4B
+  assistant:     { mode: off,  chain: "" }                     # inchangé
+  autocomplete:  { mode: off,  chain: "" }                     # Continue, inchangé

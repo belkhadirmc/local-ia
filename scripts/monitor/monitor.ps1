@@ -10,12 +10,13 @@ function Get-SentinelPid {
     $proc = Get-Process -Id $p -ErrorAction SilentlyContinue
     if ($proc -and $proc.ProcessName -match 'powershell') { $p } else { $null }
 }
-function Start-Sentinel {
-    # Processus PowerShell caché, léger (1 requête CIM / 2 s), sans privilège ; idempotent.
+function Start-Sentinel([double]$SimulateFreeGib = -1) {
+    # Processus PowerShell caché, léger (1 requête CIM / 2 s), sans privilège ; idempotent. -SimulateFreeGib : tests uniquement.
     New-Item -ItemType Directory -Force (Join-Path $Root 'runtime\state') | Out-Null
     if (Get-SentinelPid) { return }
     $s = Join-Path $Root 'scripts\monitor\sentinel.ps1'
-    Start-Process -WindowStyle Hidden -FilePath 'powershell.exe' -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$s`"") | Out-Null
+    $al = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$s`""); if ($SimulateFreeGib -ge 0) { $al += @('-SimulateFreeGib', $SimulateFreeGib.ToString([Globalization.CultureInfo]::InvariantCulture)) }
+    Start-Process -WindowStyle Hidden -FilePath 'powershell.exe' -ArgumentList $al | Out-Null
     for ($i = 0; $i -lt 20 -and -not (Test-Path (Join-Path $Root 'runtime\state\host-ram.json')); $i++) { Start-Sleep -Milliseconds 300 }
 }
 function Stop-Sentinel {
@@ -137,6 +138,14 @@ function Invoke-Monitor {
                 if ($n -eq 0 -or $i -lt $n) { Start-Sleep $iv }
             }
         }
-        default { throw 'Usage : monitor status | watch [secondes>=5] [nombre]' }
+        'simulate' {
+            # 14.B.2 : seuils SIMULÉS pour les tests de repli et de garde RAM (jamais permanent : off ou stop/start rétablit la mesure).
+            if ($Args0.Count -lt 2) { throw 'Usage : monitor simulate <Gio libres simulés>|off' }
+            Stop-Sentinel
+            if ($Args0[1] -eq 'off') { Start-Sentinel; Write-Audit 'monitor.simulate' 'off' 'mesure réelle rétablie'; Write-Output 'Sentinelle : mesure réelle rétablie.'; return }
+            $g = [double]::Parse($Args0[1], [Globalization.CultureInfo]::InvariantCulture); Start-Sentinel -SimulateFreeGib $g
+            Write-Audit 'monitor.simulate' "$g" 'actif' 'RAM Windows libre simulée'; Write-Output "Sentinelle : RAM Windows libre SIMULÉE à $g Gio (tests). Rétablir : monitor simulate off"
+        }
+        default { throw 'Usage : monitor status | watch [secondes>=5] [nombre] | simulate <Gio>|off' }
     }
 }

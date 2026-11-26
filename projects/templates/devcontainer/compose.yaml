@@ -21,6 +21,15 @@ services:
         target: /home/vscode/.cache
         volume:
           nocopy: true
+      # 14.B.2 (R30) : Python et Git isolés (volume partagé en lecture seule, épinglé, config/tools/lock.txt)
+      - type: volume
+        source: tools
+        target: /opt/local-ai-tools
+        read_only: true
+        volume:
+          nocopy: true
+    environment:
+      PATH: "/opt/local-ai-tools/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     networks: [project]
     cap_drop: [ALL]
     security_opt:
@@ -38,6 +47,9 @@ volumes:
     external: true
   cache:
     name: local-ai-cache-{{ID}}
+    external: true
+  tools:
+    name: local-ai-tools
     external: true
 
 networks:

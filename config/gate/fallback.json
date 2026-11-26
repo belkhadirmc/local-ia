@@ -1,0 +1,76 @@
+{
+    "schema":  "local-ai/agent-fallback/v1",
+    "tools_incompatible":  [
+                               "qwen2.5-coder:1.5b",
+                               "qwen2.5-coder:7b",
+                               "qwen2.5-coder:14b",
+                               "qwen3-coder:30b"
+                           ],
+    "agents":  {
+                   "architect":  {
+                                     "mode":  "auto",
+                                     "chain":  [
+                                                   "qwen3.5:9b-q4_K_M",
+                                                   "qwen3.5:4b-q4_K_M"
+                                               ]
+                                 },
+                   "developer":  {
+                                     "mode":  "auto",
+                                     "chain":  [
+                                                   "qwen3.5:9b-q4_K_M",
+                                                   "qwen3.5:4b-q4_K_M"
+                                               ]
+                                 },
+                   "devops":  {
+                                  "mode":  "auto",
+                                  "chain":  [
+                                                "qwen3.5:9b-q4_K_M",
+                                                "qwen3.5:4b-q4_K_M"
+                                            ]
+                              },
+                   "debugger":  {
+                                    "mode":  "auto",
+                                    "chain":  [
+                                                  "qwen3.5:9b-q4_K_M",
+                                                  "qwen3.5:4b-q4_K_M"
+                                              ]
+                                },
+                   "reviewer":  {
+                                    "mode":  "auto",
+                                    "chain":  [
+                                                  "qwen3.5:9b-q4_K_M",
+                                                  "qwen3.5:4b-q4_K_M"
+                                              ]
+                                },
+                   "qa":  {
+                              "mode":  "auto",
+                              "chain":  [
+                                            "qwen3.5:4b-q4_K_M"
+                                        ]
+                          },
+                   "documentalist":  {
+                                         "mode":  "auto",
+                                         "chain":  [
+                                                       "qwen3.5:4b-q4_K_M"
+                                                   ]
+                                     },
+                   "security":  {
+                                    "mode":  "ask",
+                                    "chain":  [
+                                                  "qwen3.5:9b-q4_K_M"
+                                              ]
+                                },
+                   "assistant":  {
+                                     "mode":  "off",
+                                     "chain":  [
+
+                                               ]
+                                 },
+                   "autocomplete":  {
+                                        "mode":  "off",
+                                        "chain":  [
+
+                                                  ]
+                                    }
+               }
+}

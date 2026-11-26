@@ -131,10 +131,12 @@ foreach ($f in (Get-ChildItem (Join-Path $Root 'agents\definitions') -Filter *.y
     $sys = $prompt
     if ($deleg.Count -and $DelegationMode -eq 'manual') { $sys += "`n`nDélégation automatique désactivée (V1). Pour confier une tâche à " + ($deleg -join ', ') + ", termine ta réponse par une ligne « Transfert -> <agent> : <consigne autonome et complète> » ; l'utilisateur la lance lui-même (une tâche à la fois)." }
     elseif ($deleg.Count) { $sys += "`n`nIdentifiants de délégation (outil subagent, une tâche à la fois) : " + (($deleg | ForEach-Object { "$_$DelegSuffix" }) -join ', ') + '.' }
+    # 14.B.2 : marqueur d'agent lu par la passerelle (repli manuel assisté : suggestion de modèle propre à l'agent).
+    $sys += "`n`n[local-ai agent=$id]"
     $agents[$id] = [ordered]@{ description = $label; mode = 'all'; model = "ollama/$($idToTag[$ref])"; system = $sys; permissions = $rules.ToArray() }
     # Variante déléguée (profondeur 1 imposée : aucune délégation possible), cachée, même modèle et mêmes permissions de base.
     $subs[$id] = [ordered]@{ description = "$label (agent délégué, ne délègue pas)"; mode = 'subagent'; hidden = $true; model = "ollama/$($idToTag[$ref])"
-        system = $prompt + "`n`nTu interviens comme agent délégué : ne délègue pas, traite la tâche reçue et rends un résultat complet à l'agent appelant."; permissions = $base }
+        system = $prompt + "`n`nTu interviens comme agent délégué : ne délègue pas, traite la tâche reçue et rends un résultat complet à l'agent appelant.`n`n[local-ai agent=$id]"; permissions = $base }
 }
 # Seules les cibles réellement déclarées reçoivent une variante déléguée.
 foreach ($dst in (@($delegMap.Values | ForEach-Object { $_ }) | Sort-Object -Unique)) { if ($subs.Contains($dst)) { $agents["$dst$DelegSuffix"] = $subs[$dst] } }
@@ -177,10 +179,23 @@ $cfg = [ordered]@{
 }
 $json = ($cfg | ConvertTo-Json -Depth 12) -replace '\\u0027', "'" -replace '\\u003c', '<' -replace '\\u003e', '>' -replace '\\u0026', '&'
 $json = ($json -replace "`r`n", "`n") + "`n"
+# 14.B.2 : politique de repli (config/agents/fallback.yaml) -> config/gate/fallback.json, lu par la passerelle et local-ai.ps1.
+$fbSrc = [IO.File]::ReadAllText((Join-Path $Root 'config\agents\fallback.yaml'), $Utf8)
+$fb = [ordered]@{ schema = 'local-ai/agent-fallback/v1'; tools_incompatible = @([regex]::Matches(([regex]::Match($fbSrc, '(?m)^tools_incompatible:[^\n]*\n((?:[ \t]+-[^\n]*\n)+)')).Groups[1].Value, '-\s*"?([^"\s#]+)') | ForEach-Object { $_.Groups[1].Value }); agents = [ordered]@{} }
+foreach ($m in [regex]::Matches($fbSrc, '(?m)^\s+([a-z]+):\s*\{\s*mode:\s*(auto|ask|off),\s*chain:\s*"([^"]*)"\s*\}')) {
+    $ch = @($m.Groups[3].Value -split ',' | Where-Object { $_ })
+    foreach ($x in $ch) { if (-not ($models.Keys -contains $x)) { throw "fallback.yaml : modèle '$x' absent du registre." } }
+    $fb.agents[$m.Groups[1].Value] = [ordered]@{ mode = $m.Groups[2].Value; chain = $ch }
+}
+foreach ($aid in $delegMap.Keys) { if (-not $fb.agents.Contains($aid)) { throw "fallback.yaml : agent '$aid' sans politique de repli." } }
+$fbOut = Join-Path $Root 'config\gate\fallback.json'
+$fbJson = (($fb | ConvertTo-Json -Depth 6) -replace "`r`n", "`n") + "`n"
 if ($Check) {
     $cur = if (Test-Path $Out) { [IO.File]::ReadAllText($Out, $Utf8) } else { '' }
-    if ($cur -ne $json) { Write-Output 'opencode.json : NON À JOUR (relancer config/opencode/generate-config.ps1)'; exit 1 }
+    $curFb = if (Test-Path $fbOut) { [IO.File]::ReadAllText($fbOut, $Utf8) } else { '' }
+    if ($cur -ne $json -or $curFb -ne $fbJson) { Write-Output 'opencode.json / fallback.json : NON À JOUR (relancer config/opencode/generate-config.ps1)'; exit 1 }
     Write-Output 'opencode.json : à jour'; exit 0
 }
 [IO.File]::WriteAllText($Out, $json, $Utf8)
+[IO.File]::WriteAllText($fbOut, $fbJson, $Utf8)
 Write-Output ("opencode.json : {0} modèles, {1} agents local-ai, {2} variantes déléguées, 4 intégrés désactivés" -f $models.Count, $delegMap.Count, ($agents.Count - $delegMap.Count - 4))

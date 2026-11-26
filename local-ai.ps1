@@ -28,6 +28,8 @@ $Implemented = [ordered]@{
     'permissions'    = 'permissions list|check|grant|revoke|reset|profile (S1-S4, autorisations persistantes, refus techniques prioritaires)'
     'emergency-stop' = 'emergency-stop [status|clear] : interrompt les sessions, arrête agents et relais MCP, décharge les modèles (sans suppression)'
     'continue'       = 'continue install|on|off|status : autocomplétion locale qwen2.5-coder:1.5b via relais 127.0.0.1:11435 (désactivée par défaut)'
+    'tools'          = 'tools status | verify | install --confirm : Python et Git isolés et épinglés (volume local-ai-tools, lecture seule)'
+    'fallback'       = 'fallback list | check <agent|all> | mode <agent> auto|ask|off : repli local contrôlé par tâche (affectations inchangées)'
     'project'        = 'project list|create <id>|open <id>|stop <id> : projets Dev Containers isolés ; seul le projet ouvert est partagé avec OpenCode'
     'profile'        = 'profile list | show <A|B|C> | apply <A|B|C> --confirm : profils de performance (BK1, vérification, rollback)'
     'monitor'        = 'monitor status | watch [secondes] [nombre] : CPU, RAM Windows/WSL2, swap, SSD, modèle actif, alertes, historique local'
@@ -35,7 +37,7 @@ $Implemented = [ordered]@{
 # Modules démarrables : profils Compose, image (variables .env), volumes externes requis, services arrêtés par stop
 $Modules = @{
     'ollama'   = @{ Profiles = @('ollama'); ImagePrefix = 'OLLAMA'; Volumes = @('local-ai-ollama'); Service = 'ollama'; StopServices = @(); Secrets = @() }
-    'opencode' = @{ Profiles = @('ollama', 'opencode'); ImagePrefix = 'OPENCODE'; Volumes = @('local-ai-ollama', 'local-ai-opencode'); Service = 'opencode'
+    'opencode' = @{ Profiles = @('ollama', 'opencode'); ImagePrefix = 'OPENCODE'; Volumes = @('local-ai-ollama', 'local-ai-opencode', 'local-ai-tools'); Service = 'opencode'
                     StopServices = @('opencode', 'opencode-net'); Secrets = @('secrets\opencode.env'); ConfigCheck = 'config\opencode\generate-config.ps1' }
 }
 $Planned = [ordered]@{
@@ -47,6 +49,8 @@ $EmergencyFlag = Join-Path $Root 'runtime\state\emergency.json'
 . (Join-Path $Root 'scripts\mcp\n4.ps1')
 . (Join-Path $Root 'scripts\perf\profile.ps1')
 . (Join-Path $Root 'scripts\monitor\monitor.ps1')
+. (Join-Path $Root 'scripts\agents\fallback.ps1')
+. (Join-Path $Root 'scripts\tools\tools.ps1')
 
 function Write-Audit([string]$Action, [string]$Target, [string]$Result, [string]$Detail = '') {
     # Journal d'audit local (runtime/logs/audit.jsonl, non versionné). Jamais de secret ni de contenu de fichier.
@@ -536,20 +540,56 @@ function Invoke-Agent {
         'handoff' {
             # 14.B.1 (R12) : transfert MANUEL fiable — nouvelle session de l'agent cible (projet ouvert), consigne envoyée, aucune
             # attente imbriquée ni délégation automatique. Modèle de session optionnel (--model, sans changement d'affectation).
-            if ($Args0.Count -lt 3) { throw 'Usage : agent handoff <agent> "<consigne>" [--model <tag>] [--dry-run]' }
+            # 14.B.2 : repli local contrôlé AVANT exécution (Resolve-AgentModel), journalisé ; --model = choix manuel explicite ;
+            # --accept-fallback = confirmation (politique ask) ; --watch <s> = suivi après démarrage (repli proposé, jamais rejoué).
+            if ($Args0.Count -lt 3) { throw 'Usage : agent handoff <agent> "<consigne>" [--model <tag>] [--accept-fallback] [--watch <s>] [--dry-run]' }
             Assert-NoEmergency
             $a = & $findAgent $Args0[1]; if ($a.Continue) { throw "Agent '$($a.Id)' hors OpenCode (Continue)." }
-            $i = [array]::IndexOf($Args0, '--model'); $mt = if ($i -ge 0 -and $i + 1 -lt $Args0.Count) { (& $findModel $Args0[$i + 1]).Tag } else { $null }
+            $opt = { param($n) $k = [array]::IndexOf($Args0, $n); if ($k -ge 0 -and $k + 1 -lt $Args0.Count) { $Args0[$k + 1] } else { $null } }
+            $mt = if (& $opt '--model') { (& $findModel (& $opt '--model')).Tag } else { $null }
+            $d = $null
+            if (-not $mt) {
+                $d = Resolve-AgentModel $a.Id -AcceptFallback:($Args0 -contains '--accept-fallback')
+                Write-Output (Format-FallbackDecision $d)
+                if ($d.blocked -and $d.mode -ne 'off') { Write-FallbackLog $d 'bloqué : aucun modèle admissible'; throw "Tâche non lancée pour $($a.Id) : aucun modèle admissible." }
+                if ($d.needs_confirmation) { Write-FallbackLog $d 'proposé : confirmation requise'; return }
+                $mt = $d.selected
+            }
             $proj = Get-ActiveProject; $dir = if ($proj) { "/data/workspace/$proj" } else { '/data/workspace' }
-            $body = [ordered]@{ title = "Transfert -> $($a.Id) $(Get-Date -Format 'HH:mm')"; agent = $a.Id; location = @{ directory = $dir } }
-            if ($mt) { $body.model = @{ providerID = 'ollama'; id = $mt } }
-            if ($Args0 -contains '--dry-run') { Write-Output "Transfert (simulation) : agent $($a.Id), répertoire $dir$(if ($mt) { ", modèle de session $mt" }), consigne de $($Args0[2].Length) caractères."; return }
+            $body = [ordered]@{ title = "Transfert -> $($a.Id) $(Get-Date -Format 'HH:mm')"; agent = $a.Id; location = @{ directory = $dir }; model = @{ providerID = 'ollama'; id = $mt } }
+            if ($Args0 -contains '--dry-run') { Write-Output "Transfert (simulation) : agent $($a.Id), répertoire $dir, modèle de session $mt, consigne de $($Args0[2].Length) caractères."; return }
             $s = Invoke-OcApi 'POST' '/api/session' ($body | ConvertTo-Json -Compress -Depth 5)
             $sid = ([regex]::Match($s, '"id":"(ses_[^"]+)"')).Groups[1].Value; if (-not $sid) { throw "création de session : $s" }
+            # Modèle AFFICHÉ (celui de la session, montré par le Web/TUI) vérifié avant envoi de la consigne
+            $shown = ([regex]::Match((Invoke-OcApi 'GET' "/api/session/$sid" ''), '"model":\{[^}]*"id":"([^"]+)"')).Groups[1].Value
+            if ($shown -ne $mt) { throw "modèle de session affiché '$shown' différent du modèle retenu '$mt' : tâche non lancée" }
             $p = Invoke-OcApi 'POST' "/api/session/$sid/prompt" (@{ text = $Args0[2] } | ConvertTo-Json -Compress)
             if ($p -notmatch '"type":"user"') { throw "envoi de la consigne : $p" }
-            Write-Audit 'agent.handoff' $a.Id 'envoyé' "session $sid"
-            Write-Output "Transfert envoyé à $($a.Id) : session $sid ($dir). Suivi : Web http://127.0.0.1:4096 ou .\local-ai.ps1 tui."
+            if ($d) { Write-FallbackLog $d $(if ($d.fallback) { 'repli appliqué' } else { 'modèle initial' }) $sid }
+            Write-Audit 'agent.handoff' $a.Id 'envoyé' "session $sid modèle $mt"
+            Write-Output "Transfert envoyé à $($a.Id) : session $sid ($dir), modèle affiché $shown. Suivi : Web http://127.0.0.1:4096 ou .\local-ai.ps1 tui."
+            $w = & $opt '--watch'
+            if ($w) {
+                $t0 = Get-Date; $used = $null; $err = $null
+                while (((Get-Date) - $t0).TotalSeconds -lt [int]$w) {
+                    Start-Sleep 3; $msgs = @((Invoke-OcApi 'GET' "/api/session/$sid/message" '' | ConvertFrom-Json).data)
+                    $as = @($msgs | Where-Object { (Get-JsonProp $_ 'type') -eq 'assistant' })
+                    $u2 = @($as | ForEach-Object { Get-JsonProp (Get-JsonProp $_ 'model') 'id' } | Where-Object { $_ } | Select-Object -Unique)
+                    if ($u2.Count) { $used = $u2 -join ',' }
+                    $e = @($as | ForEach-Object { Get-JsonProp (Get-JsonProp $_ 'error') 'message' } | Where-Object { $_ }) | Select-Object -First 1
+                    if ($e) { $err = $e; break }
+                    $first = if ($msgs.Count) { $msgs[0] } else { $null }
+                    if ($first -and ((Get-JsonProp $first 'type') -eq 'idle' -or ((Get-JsonProp $first 'type') -eq 'assistant' -and (Get-JsonProp (Get-JsonProp $first 'time') 'completed') -and (Get-JsonProp $first 'finish') -ne 'tool-calls'))) { break }
+                }
+                Write-Output "Modèle RÉELLEMENT utilisé (messages) : $(if ($used) { $used } else { 'aucun message encore' })$(if ($used -and $used -ne $mt) { ' — ÉCART avec le modèle affiché' })"
+                if ($err) {
+                    Write-Output "Échec après démarrage : $err"
+                    if ($err -match 'REPLI PROPOSÉ|outils incompatibles|RAM') {
+                        $nd = Resolve-AgentModel $a.Id -AcceptFallback; Write-FallbackLog $nd 'après démarrage : repli proposé (confirmation requise, aucun rejeu)' $sid
+                        Write-Output "Aucun rejeu automatique. Pour relancer, confirmer explicitement : .\local-ai.ps1 agent handoff $($a.Id) `"<consigne>`" --model $(if ($nd.selected) { $nd.selected } else { '<modèle>' })"
+                    }
+                }
+            }
         }
         'list' {
             $agents | ForEach-Object { $a = $_; $m = $models | Where-Object Id -eq $a.Ref | Select-Object -First 1
@@ -970,6 +1010,8 @@ function Invoke-Project {
 }
 
 switch ($Command.ToLowerInvariant()) {
+    'tools'          { try { Invoke-Tools $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
+    'fallback'       { try { Invoke-Fallback $Arguments | Format-Table -AutoSize -Wrap | Out-String -Width 220 | Write-Output } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
     'profile'        { try { Invoke-Profile $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
     'monitor'        { try { Invoke-Monitor $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
     'continue'       { try { Invoke-Continue $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }

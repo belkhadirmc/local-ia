@@ -106,3 +106,68 @@ relecture et documentation avec qwen3.5:4b (≈ 1 à 2,5 min par tâche courte �
 garde-fous effectifs. **Non apte en l'état** avec les affectations actuelles (7 agents OpenCode sur 9 inopérants : architect, reviewer, security bloqués par la RAM ; developer, devops, debugger, qa sans appels d'outils) → R5 bloquante
 jusqu'à l'accord sur les affectations. Les modèles ≥ 14B ne sont utilisables que si la RAM Windows libre le permet (fermer des
 applications) ; délégation manuelle uniquement ; exécution des tests hors agents (R30).
+
+## 14.B.2 — Finalisation V1 : repli local contrôlé et Python/Git isolés
+
+BK1 : `backups/restore-points/14.B.2_20261126_213641`. Les 10 affectations initiales et les 7 modèles sont **conservés**
+(`agents/definitions`, `assignments.initial.yaml` inchangés ; les recommandations ci-dessus restent non appliquées).
+
+### Repli local contrôlé (`config/agents/fallback.yaml` -> `config/gate/fallback.json`)
+
+| Agent | Initial | Chaîne de repli | Mode |
+|---|---|---|---|
+| architect, reviewer | gpt-oss:20b | qwen3.5:9b -> qwen3.5:4b | auto |
+| developer, devops | qwen3-coder:30b | qwen3.5:9b -> qwen3.5:4b | auto |
+| debugger | qwen2.5-coder:14b | qwen3.5:9b -> qwen3.5:4b | auto |
+| qa | qwen2.5-coder:7b | qwen3.5:4b | auto |
+| documentalist | qwen3.5:9b | qwen3.5:4b | auto |
+| security | gpt-oss:20b | qwen3.5:9b **uniquement** | ask (confirmation) |
+| assistant, autocomplete | inchangés | — | off |
+
+- **Déclencheurs** : RAM insuffisante (admission **à blanc** de la passerelle, `POST /local-ai/admission`, aucune inférence) ou
+  incompatibilité d'outils avérée (`tools_incompatible` : qwen2.5-coder:*, qwen3-coder:30b — diagnostic 14.B.1).
+- **Avant exécution** (`local-ai.ps1 agent handoff <agent> "<consigne>"`) : modèle initial s'il est admis et compatible, sinon
+  premier de la chaîne qui l'est ; `auto` appliqué au **modèle de la session** de cette tâche ; `ask` proposé, appliqué avec
+  `--accept-fallback` ; `off` sans repli. Aucun modèle admissible -> tâche non lancée (la garde n'est jamais contournée).
+- **Après démarrage** (`--watch <s>`) : échec (garde RAM, outils) -> repli **proposé**, jamais rejoué.
+- **Vérification** : modèle **affiché** (modèle de la session, montré par le Web/TUI) contrôlé avant l'envoi de la consigne ;
+  modèle **réellement utilisé** lu dans les messages (`model.id`) et dans le journal de la passerelle (`{agent}`).
+- **Journal** : `runtime/logs/fallback.jsonl` + audit (`agent.fallback`) : agent, modes, modèles, motif, seuils simulés, résultat, session.
+- **Retour au modèle initial** : automatique à la tâche suivante (le repli ne vit que dans la session).
+- `local-ai.ps1 fallback list | check <agent|all> | mode <agent> auto|ask|off` (BK1 + régénération, effet immédiat).
+- **Limite (OpenCode 2.3.2)** : une session ouverte **directement** dans le Web ou le TUI envoie sa requête sans point
+  d'interception ; la passerelle ne substitue **jamais** un modèle en silence (le modèle affiché resterait faux). Repli **manuel
+  assisté** : refus explicite (outils incompatibles ou RAM) avec la proposition propre à l'agent (marqueur `[local-ai agent=<id>]`
+  ajouté aux prompts système), à appliquer par le sélecteur de modèle de la session ou par `agent handoff` (R33).
+- Seuils simulés pour les tests : `local-ai.ps1 monitor simulate <Gio>|off` — **pessimistes uniquement** (bornés par la mesure réelle).
+
+### R30 — Python et Git isolés
+
+Arbitrage R3 : **aucune construction d'image** (cache BuildKit non sollicité). Volume `local-ai-tools` (lecture seule) peuplé une fois
+depuis l'image OpenCode épinglée (Alpine 3.24, clés apk de l'image) : `python3=3.14.10-r2`, `git=2.54.1-r0`, 34 paquets inventoriés
+avec sommes (`config/tools/lock.txt`). Enveloppes `bin/python3`, `bin/git` (chargeur musl du volume : utilisables dans OpenCode et
+les Dev Containers Ubuntu ; Git sans configuration système, sans pager, maintenance automatique désactivée). Montage en lecture
+seule dans OpenCode (PATH du shell des agents) et dans le modèle de Dev Container (nouveaux projets ; `demo` non modifié).
+Permissions **inchangées** (`python3 -m unittest` = ask, `python3 -c` = refus, `git status` = autorisé, `git push` = refus).
+`local-ai.ps1 tools status | verify | install --confirm`.
+
+### Tests 14.B.2
+
+| Test | Résultat |
+|---|---|
+| `fallback check all` en RAM réelle (22 Gio libres) : 20B -> 9B (RAM), 30B/14B -> 9B (outils), 7B -> 4B, security -> 9B sur confirmation | PASS (sans inférence) |
+| Seuils simulés 40 / 12 / 5 Gio : initial conservé / 4B (security : aucun) / aucun modèle (rien de forcé) | PASS |
+| Simulation optimiste bornée (40 demandé -> 22,8 publié) | PASS |
+| `ask` : security -> proposition, aucune session sans `--accept-fallback` | PASS |
+| `auto` réel : reviewer 20B -> 4B ; affiché = utilisé = 4B (session, messages, passerelle `{reviewer}`), 95 s | PASS |
+| Après démarrage : RAM simulée 2 Gio pendant l'inférence -> abandon en 2 s, modèle déchargé, repli proposé sans rejeu | PASS (abandon R31 déclenché réellement) |
+| Web/TUI direct (developer sur 30B) : refus explicite + « REPLI PROPOSÉ … developer -> qwen3.5:9b », modèle affiché réel | PASS |
+| `fallback mode qa off` puis `auto` (BK1, effet immédiat) | PASS |
+| Python 3.14.10 / Git 2.54.1 : OpenCode (shell des agents, sans mot de passe) et image Dev Container, lecture seule, sans réseau | PASS |
+| Non-régression : passerelle 15/15, JSON 21/21, Continue 7/7, permissions 8/8, arrêt d'urgence, `config` 18/0 | PASS |
+
+### Aptitude V1 après 14.B.2
+
+**Apte** pour un usage local séquentiel supervisé avec les affectations initiales : les 9 agents OpenCode deviennent opérationnels
+par repli contrôlé (9B ou 4B selon la RAM, security sur confirmation) via `agent handoff`, et par repli manuel assisté dans le
+Web/TUI ; tests exécutables par les agents (Python/Git isolés, validation humaine). R5 devient acceptable (affectations conservées par choix).
