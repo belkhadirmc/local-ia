@@ -1,0 +1,4 @@
+# Autorisations PERSISTANTES local-ai (10.B.1) — gérées par .\local-ai.ps1 permissions grant|revoke|reset. Ne pas éditer.
+# Fusionnées par config/opencode/generate-config.ps1 AVANT les refus techniques (qui restent prioritaires).
+schema: local-ai/permission-grants/v1
+grants: []

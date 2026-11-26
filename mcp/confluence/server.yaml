@@ -4,7 +4,7 @@ id: confluence
 name: Confluence
 enabled: false
 status: prepared
-activation: not_implemented
+activation: n4-relay-untested   # 10.B.1 : relais distant généré ; non testé contre l'origine réelle (aucune connexion externe sans accord)
 official: true
 image: null            # serveur distant officiel Atlassian (aucune image) ; accès via relais N4 à définir
 transport: http
@@ -24,3 +24,11 @@ egress_allowlist: ["mcp.atlassian.com:443"]
 env_file: secrets/mcp-confluence.env
 compose_template: compose/templates/mcp.yaml
 opencode_snippet: opencode.snippet.json
+# Architecture N4 (10.B.1) — relais vers le serveur Atlassian Rovo (jeton API autorisé par l'administrateur, Basic base64(email:jeton)).
+n4:
+  relay_type: remote-http
+  origin: "https://mcp.atlassian.com"
+  path: /v2/mcp
+  egress_allowlist: [mcp.atlassian.com:443]
+  auth_header: "Basic {TOKEN}"
+  secret_var: ATLASSIAN_MCP_TOKEN

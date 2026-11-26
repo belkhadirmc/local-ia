@@ -9,7 +9,7 @@ permissions:
   bash: ask
   network: deny
   mcp: ask
-  delegation: allow
+  delegation: ask   # 10.B.1 : validation des délégations rétablie (cibles explicites, profondeur 1)
 always_ask:
   - "suppression de fichiers"
   - "git push"

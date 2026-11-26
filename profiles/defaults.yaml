@@ -23,7 +23,10 @@ applied:
   security:
     profile: S2
     status: applied
-    reason: "agents OpenCode déployés avec permissions des définitions (base deny, ask pour edit/shell) ; durcissement conteneur ollama + opencode"
+    reason: "agents OpenCode déployés avec permissions des définitions (base deny, ask pour edit/shell, délégations à valider) ; refus techniques prioritaires et anti-chaînage (10.B.1) ; durcissement conteneur ollama + opencode"
+    management: "local-ai.ps1 permissions list|check|grant|revoke|reset|profile ; autorisations persistantes config/security/grants.yaml"
+    emergency_stop: "local-ai.ps1 emergency-stop [status|clear]"
+    audit_log: runtime/logs/audit.jsonl
     container_hardening: "uid 1000, cap_drop ALL, seccomp, no-new-privileges, racine en lecture seule"
   backup:
     profile: BK1
@@ -52,12 +55,16 @@ modules:
     provider: "ollama interne uniquement, 7 modèles, contexte 8192 max"
     agents: "9 (affectations initiales, non confirmées ; référence agents/assignments.initial.yaml ; gestion local-ai.ps1 agent)"
     clients: "Web et TUI ; Desktop Windows bloqué (serveur autonome imposé, ADR-0008)"
-    delegation: "explicite (allow), cibles = variantes cachées <agent>-delegue sans délégation : profondeur 1 imposée (ADR-0009)"
+    delegation: "explicite, à valider en S2 (ask), cibles = variantes cachées <agent>-delegue sans délégation : profondeur 1 imposée (ADR-0009, ADR-0010)"
     builtin_agents_disabled: [build, plan, general, explore]
-    verified: "2026-11-26 (actions 7.B.1, 8.B.1, 9.B.1)"
+    networks: [local-ai-core, local-ai-localhost, local-ai-mcp-relay]
+    verified: "2026-11-26 (actions 7.B.1, 8.B.1, 9.B.1, 10.B.1)"
   mcp:
     status: prepared
     enabled: 0
     servers: [github, gitlab, jira, confluence]
-    activation: "refusée (N4 non implémenté)"
+    architecture: "N4 implémentée (relais isolés, sortie filtrée par destination, lecture seule) — ADR-0010"
+    activation: "sur accord : jeton lecture seule de l'utilisateur dans secrets/mcp-<id>.env puis mcp enable <id> --authorize-n4"
+    images: ["ubuntu/squid:6.6-24.04_edge@sha256:d588976774988e439af518940316004280dec80772c19af1cc33ae39afa5d2eb", "ghcr.io/github/github-mcp-server:v2.3.0@sha256:110ce018ce2a559b3d552673e675806ad9c2abbc1749360d41289ea415c67926"]
+    verified: "2026-11-26 (10.B.1, GitHub en témoin local ; aucune connexion externe)"
 note: "État appliqué renseigné manuellement ; à automatiser via local-ai.ps1 profile (non implémenté)."

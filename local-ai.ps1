@@ -23,8 +23,10 @@ $Implemented = [ordered]@{
     'stop'   = 'stop [ollama|opencode] : arrête un module sans supprimer conteneurs, réseau ni volume'
     'model'  = 'model list | model show <tag> (lecture seule ; pull/rm NON IMPLÉMENTÉS)'
     'tui'    = 'Interface terminal OpenCode (dans le conteneur, serveur interne)'
-    'mcp'    = 'mcp list | status | enable <id> | disable <id> (enable refusé tant que N4 non implémenté)'
+    'mcp'    = 'mcp list | status | enable <id> --authorize-n4 [--witness] | disable <id> [--revoke] (relais N4 isolés)'
     'agent'  = 'agent list | agent model <agent> [<modèle>] | agent reset <agent|all> (BK1 + rollback, OpenCode régénéré)'
+    'permissions'    = 'permissions list|check|grant|revoke|reset|profile (S1-S4, autorisations persistantes, refus techniques prioritaires)'
+    'emergency-stop' = 'emergency-stop [status|clear] : interrompt les sessions, arrête agents et relais MCP, décharge les modèles (sans suppression)'
 }
 # Modules démarrables : profils Compose, image (variables .env), volumes externes requis, services arrêtés par stop
 $Modules = @{
@@ -35,11 +37,28 @@ $Modules = @{
 $Planned = [ordered]@{
     'profile'        = 'Afficher / appliquer un profil (A-C, N1-N4, S1-S4, BK1-BK3)'
     'monitor'        = 'Supervision selon config/monitoring/thresholds.yaml'
-    'permissions'    = 'Consulter / modifier les permissions'
     'backup'         = 'Sauvegarde BK1 / BK2 / BK3'
     'restore'        = 'Restauration depuis un point de sauvegarde'
     'maintenance'    = 'Fenêtre de maintenance (profil N2)'
-    'emergency-stop' = "Arrêt d'urgence de tous les services local-ai"
+}
+$EmergencyFlag = Join-Path $Root 'runtime\state\emergency.json'
+. (Join-Path $Root 'scripts\mcp\n4.ps1')
+
+function Write-Audit([string]$Action, [string]$Target, [string]$Result, [string]$Detail = '') {
+    # Journal d'audit local (runtime/logs/audit.jsonl, non versionné). Jamais de secret ni de contenu de fichier.
+    $dir = Join-Path $Root 'runtime\logs'; if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Force $dir | Out-Null }
+    $clean = ($Detail -replace '(?i)(token|password|secret|bearer|basic)\s*[:=]?\s*\S+', '$1=<masqué>')
+    $o = [ordered]@{ ts = (Get-Date).ToString('o'); action = $Action; target = $Target; result = $Result; detail = $clean; profile = (Get-SecProfile) }
+    [IO.File]::AppendAllText((Join-Path $dir 'audit.jsonl'), (($o | ConvertTo-Json -Compress) + "`n"), (New-Object Text.UTF8Encoding $false))
+}
+
+function Get-SecProfile {
+    $m = [regex]::Match((Get-Content (Join-Path $Root 'profiles\defaults.yaml') -Raw -Encoding UTF8), '(?ms)^desired:.*?^\s+security:\s*(S[1-4])')
+    if ($m.Success) { $m.Groups[1].Value } else { 'S2' }
+}
+
+function Assert-NoEmergency {
+    if (Test-Path $EmergencyFlag) { throw "Arrêt d'urgence actif ($((Get-Content $EmergencyFlag -Raw | ConvertFrom-Json).ts)) : lever avec .\local-ai.ps1 emergency-stop clear" }
 }
 
 function Show-Help {
@@ -112,7 +131,9 @@ function Show-Status {
         Write-Output ("{0,-17} : {1}{2}" -f $svc, $h, $extra)
     }
     $mcpOn = @(Select-String -Path (Join-Path $Root 'mcp\registry.yaml') -Pattern '^\s+enabled:\s*true').Count
-    Write-Output ("MCP               : {0} activé(s) / 4 préparés (N4 non implémenté)" -f $mcpOn)
+    $relays = @((Invoke-Native docker @('ps', '--filter', 'label=local-ai.module=mcp', '--format', '{{.Names}}')).Output -split "`n" | Where-Object { $_ })
+    Write-Output ("MCP               : {0} activé(s) / 4 préparés (N4) | relais actifs : {1}" -f $mcpOn, $(if ($relays) { $relays -join ',' } else { 'aucun' }))
+    Write-Output ("Sécurité          : profil {0} | arrêt d'urgence : {1}" -f (Get-SecProfile), $(if (Test-Path $EmergencyFlag) { 'ACTIF' } else { 'non' }))
 }
 
 function Test-YamlFile {
@@ -285,7 +306,9 @@ function Assert-Preflight {
 function Start-Module {
     param([string[]]$Args0)
     $m = Resolve-Module $Args0
+    Assert-NoEmergency
     Assert-Preflight $m
+    Write-Audit 'start' $m.Name 'demandé'
     Push-Location $Root
     try {
         $pf = @($m.Profiles | ForEach-Object { '--profile', $_ })
@@ -544,14 +567,42 @@ function Invoke-Mcp {
         }
         'enable' {
             $s = & $pick
+            $witness = $Args0 -contains '--witness'
             $why = @()
-            if ($s.Activation -ne 'implemented') { $why += "activation '$($s.Activation)' : architecture N4 (relais MCP isolé, filtrage de sortie) non implémentée" }
-            $applied = [regex]::Match((Get-Content (Join-Path $Root 'profiles\defaults.yaml') -Raw), '(?ms)^applied:.*?network:\s*\r?\n\s+profile:\s*(\S+)').Groups[1].Value
-            if ($applied -ne 'N4') { $why += "profil réseau appliqué '$applied' (N4 requis, validation explicite préalable)" }
-            if (-not $s.Secret -or -not (Test-Path (Join-Path $Root $s.Secret))) { $why += "secret '$($s.Secret)' absent (aucun jeton créé sans validation)" }
-            if ($Args0 -notcontains '--authorize-n4') { $why += "autorisation explicite absente (--authorize-n4)" }
-            Write-Error ("Activation MCP '{0}' REFUSÉE :`n - {1}" -f $s.Id, ($why -join "`n - ")) -ErrorAction Continue
-            exit 3
+            if ($Args0 -notcontains '--authorize-n4') { $why += 'autorisation explicite absente (--authorize-n4)' }
+            if (Test-Path $EmergencyFlag) { $why += "arrêt d'urgence actif" }
+            $d = $null; try { $d = Get-N4Definition $Root $s.Id } catch { $why += $_.Exception.Message }
+            if ($d) {
+                if ($d.Type -notin 'container-http', 'remote-http') { $why += "type de relais '$($d.Type)' non pris en charge" }
+                $imgs = @($script:N4Squid) + @(if ($d.Type -eq 'container-http') { $d.Image }) + @(if ($witness) { $script:N4Witness })
+                foreach ($i in $imgs) {
+                    if ($i -notmatch '@sha256:[0-9a-f]{64}$') { $why += "image non épinglée : $i" }
+                    elseif ((Invoke-Native docker @('image', 'inspect', $i, '--format', '{{.Id}}')).Code -ne 0) { $why += "image absente localement (aucun téléchargement implicite) : $i" }
+                }
+                if (-not $witness -and -not (Test-Path $d.SecretFile)) { $why += "secret 'secrets/mcp-$($s.Id).env' absent (jeton lecture seule à créer par l'utilisateur ; aucun jeton créé ici)" }
+            }
+            if ((Invoke-Native docker @('network', 'inspect', 'local-ai-mcp-relay', '--format', '{{.Name}}')).Code -ne 0) { $why += 'réseau local-ai-mcp-relay absent (.\local-ai.ps1 start opencode)' }
+            if ($why) { Write-Audit 'mcp.enable' $s.Id 'refusé' ($why -join ' ; '); Write-Error ("Activation MCP '{0}' REFUSÉE :`n - {1}" -f $s.Id, ($why -join "`n - ")) -ErrorAction Continue; exit 3 }
+            $dir = $null
+            try {
+                $dir = New-N4Files $Root $d -Witness:$witness
+                $r = Invoke-N4Compose $Root $s.Id @('up', '-d', '--pull', 'never', '--no-build'); if ($r.Code -ne 0) { throw "démarrage des relais : $($r.Output)" }
+                $netId = (Invoke-Native docker @('compose', '-f', (Join-Path $Root 'compose.yaml'), '--profile', 'ollama', '--profile', 'opencode', 'ps', '-q', 'opencode-net')).Output.Trim()
+                $probe = ''; for ($i = 0; $i -lt 10 -and $probe -notmatch 'HTTP/1\.1 [2-4]\d\d'; $i++) { Start-Sleep 2; $probe = (Invoke-Native docker @('exec', $netId, '/bin/busybox', 'wget', '-S', '-q', '-O', '/dev/null', '-T', '5', "http://mcp-relay-$($s.Id):8080$($d.Path)")).Output }
+                if ($probe -notmatch 'HTTP/1\.1 [2-4]\d\d') { throw "relais injoignable depuis OpenCode : $probe" }
+                if ($witness) { [IO.File]::WriteAllText((Join-Path $dir 'witness'), (Get-Date).ToString('o')) }
+                else { $rf = Join-Path $Root 'mcp\registry.yaml'; $t = [IO.File]::ReadAllText($rf); [IO.File]::WriteAllText($rf, [regex]::Replace($t, '(?ms)(-\s+id:\s*' + [regex]::Escape($s.Id) + '\s.*?^\s+enabled:\s*)false', '${1}true'), (New-Object Text.UTF8Encoding $false)) }
+                $msg = Invoke-OpenCodeReload
+            } catch {
+                $err = $_.Exception.Message
+                if ($dir) { [void](Invoke-N4Compose $Root $s.Id @('down')) ; Remove-Item (Join-Path $dir 'witness') -ErrorAction SilentlyContinue }
+                if (-not $witness) { $rf = Join-Path $Root 'mcp\registry.yaml'; $t = [IO.File]::ReadAllText($rf); [IO.File]::WriteAllText($rf, [regex]::Replace($t, '(?ms)(-\s+id:\s*' + [regex]::Escape($s.Id) + '\s.*?^\s+enabled:\s*)true', '${1}false'), (New-Object Text.UTF8Encoding $false)) }
+                try { [void](Invoke-OpenCodeReload) } catch { }
+                Write-Audit 'mcp.enable' $s.Id 'échec+rollback' $err
+                throw "Activation MCP '$($s.Id)' ÉCHOUÉE ($err) — relais arrêtés, configuration restaurée."
+            }
+            Write-Audit 'mcp.enable' $s.Id $(if ($witness) { 'activé (témoin local)' } else { 'activé (N4)' }) ($d.Allow -join ',')
+            Write-Output ("MCP {0} : activé {1} — relais mcp-relay-{0}, sortie limitée à {2} | {3}" -f $s.Id, $(if ($witness) { 'en TÉMOIN LOCAL (jeton fictif, aucune connexion externe)' } else { '(N4, lecture seule)' }), $(if ($witness) { 'witness-allowed' } else { $d.Allow -join ', ' }), $msg)
         }
         'disable' {
             $s = & $pick
@@ -561,7 +612,15 @@ function Invoke-Mcp {
                 $n = if ($f -like '*registry.yaml') { [regex]::Replace($t, '(?ms)(-\s+id:\s*' + [regex]::Escape($s.Id) + '\s.*?^\s+enabled:\s*)true', '${1}false') } else { [regex]::Replace($t, '(?m)^enabled:\s*true', 'enabled: false') }
                 if ($n -ne $t) { [IO.File]::WriteAllText($f, $n, $u); $changed++ }
             }
-            Write-Output ("MCP {0} : {1} (aucun secret ni réseau modifié)." -f $s.Id, $(if ($changed) { 'désactivé' } else { 'déjà désactivé' }))
+            $dir = Get-N4Dir $Root $s.Id
+            if (Test-Path (Join-Path $dir 'compose.yaml')) { $r = Invoke-N4Compose $Root $s.Id @('down'); if ($r.Code -ne 0) { throw "arrêt des relais : $($r.Output)" }; $changed++ }
+            $wasWitness = Test-Path (Join-Path $dir 'witness')
+            if ($wasWitness -or (Test-Path $dir)) { Remove-Item $dir -Recurse -Force; $changed++ }   # fichiers générés uniquement (runtime/)
+            $revoked = $false
+            if ($Args0 -contains '--revoke') { $af = Join-Path $Root "secrets\mcp-$($s.Id).relay-auth.conf"; if (Test-Path $af) { Remove-Item $af -Force; $revoked = $true } }
+            $msg = Invoke-OpenCodeReload
+            Write-Audit 'mcp.disable' $s.Id 'désactivé' $(if ($revoked) { 'copie relais du jeton supprimée' } else { '' })
+            Write-Output ("MCP {0} : {1}{2} | {3}" -f $s.Id, $(if ($changed) { 'désactivé, relais arrêtés et supprimés' } else { 'déjà désactivé' }), $(if ($revoked) { ' ; copie du jeton pour le relais supprimée (révoquer aussi le jeton chez le fournisseur)' } else { '' }), $msg)
         }
         default { Write-Error ("Sous-commande 'mcp {0}' NON IMPLÉMENTÉE (disponibles : list, status, enable, disable)." -f $sub) -ErrorAction Continue; exit 2 }
     }
@@ -574,7 +633,158 @@ function Start-Tui {
     & docker exec -it -w /data/workspace $id opencode --server http://127.0.0.1:4096
 }
 
+# ------------------------------------------------------------------ permissions
+function Get-OpenCodeId { (Invoke-Native docker @('compose', '-f', (Join-Path $Root 'compose.yaml'), '--profile', 'ollama', '--profile', 'opencode', 'ps', '-q', '--status', 'running', 'opencode')).Output.Trim() }
+function Invoke-OcApi([string]$Method, [string]$Path, [string]$Data) {
+    $id = Get-OpenCodeId; if (-not $id) { throw "OpenCode n'est pas démarré." }
+    if (-not $Data) { return (Invoke-Native docker @('exec', $id, 'opencode', 'api', '--server', 'http://127.0.0.1:4096', $Method, $Path)).Output }
+    # PowerShell 5.1 altère les arguments natifs contenant espaces et guillemets : corps JSON transmis par l'entrée standard (UTF-8 sans BOM).
+    $prevEnc = $OutputEncoding; $OutputEncoding = New-Object Text.UTF8Encoding $false
+    $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+    try { $out = $Data | & docker exec -i $id /bin/sh -c 'd=$(cat); exec opencode api --server http://127.0.0.1:4096 \"$0\" \"$1\" -d \"$d\"' $Method $Path 2>&1 | ForEach-Object { "$_" } }
+    finally { $ErrorActionPreference = $prev; $OutputEncoding = $prevEnc }
+    $out -join "`n"
+}
+function Test-WildMatch([string]$Pattern, [string]$Value) { $Value -like ($Pattern -replace '\[', '`[' -replace '\]', '`]') }
+$PermActions = 'read', 'grep', 'glob', 'edit', 'shell', 'subagent'
+$HardOnly = 'webfetch', 'websearch', 'external_directory'
+
+function Invoke-Permissions {
+    param([string[]]$Args0)
+    $sub = if ($Args0 -and $Args0[0]) { $Args0[0].ToLowerInvariant() } else { 'list' }
+    $u = New-Object Text.UTF8Encoding $false
+    $gf = Join-Path $Root 'config\security\grants.yaml'
+    $cfgFile = Join-Path $Root 'config\opencode\opencode.json'
+    $opt = { param($n) $i = [array]::IndexOf($Args0, $n); if ($i -ge 0 -and $i + 1 -lt $Args0.Count) { $Args0[$i + 1] } else { $null } }
+    $agentIds = @((Get-Content $cfgFile -Raw -Encoding UTF8 | ConvertFrom-Json).agents.PSObject.Properties | Where-Object { -not ($_.Value.PSObject.Properties.Name -contains 'disabled') } | ForEach-Object Name)
+    $grants = { if (Test-Path $gf) { @([regex]::Matches([IO.File]::ReadAllText($gf, $u), '(?m)^\s*-\s*\{([^}\r\n]*)\}') | ForEach-Object { $kv = [ordered]@{}; foreach ($p in ($_.Groups[1].Value -split ',')) { if ($p -match '^\s*(\w+):\s*"?([^"]*)"?\s*$') { $kv[$Matches[1]] = $Matches[2] } }; [pscustomobject]$kv }) } else { @() } }
+    $saveGrants = { param($list) $list = @($list | Where-Object { $_ })
+        $lines = @('# Autorisations PERSISTANTES local-ai (10.B.1) — gérées par .\local-ai.ps1 permissions grant|revoke|reset. Ne pas éditer.',
+            '# Fusionnées par config/opencode/generate-config.ps1 AVANT les refus techniques (qui restent prioritaires).', 'schema: local-ai/permission-grants/v1', 'grants:')
+        foreach ($g in $list) { $lines += ('  - {' + ((@($g.PSObject.Properties) | ForEach-Object { "$($_.Name): `"$($_.Value)`"" }) -join ', ') + '}') }
+        if (-not $list.Count) { $lines[-1] = 'grants: []' }
+        [IO.File]::WriteAllText($gf, (($lines -join "`n") + "`n"), $u)
+    }
+    $apply = { param([string]$What)
+        $bk = New-AgentRestorePoint 'permissions' @($gf, $cfgFile, (Join-Path $Root 'profiles\defaults.yaml'))
+        try { $m = Invoke-OpenCodeReload; "$What | $m | point BK1 : $($bk.Substring($Root.Length + 1))" }
+        catch { $e = $_.Exception.Message; Restore-AgentRestorePoint $bk; try { [void](Invoke-OpenCodeReload) } catch { }; throw "ÉCHEC ($e) — ROLLBACK depuis $($bk.Substring($Root.Length + 1))" }
+    }
+    switch ($sub) {
+        'list' {
+            $j = Get-Content $cfgFile -Raw -Encoding UTF8 | ConvertFrom-Json
+            Write-Output ("Profil de sécurité actif : {0} (défaut S2) — refus techniques prioritaires : {1} règles" -f (Get-SecProfile), @($j.permissions | Where-Object effect -eq 'deny').Count)
+            $only = & $opt '--agent'
+            $rows = foreach ($a in $agentIds) {
+                if ($only -and $a -ne $only) { continue }
+                $p = @($j.agents.$a.permissions)
+                $eff = { param($act) $r = $p | Where-Object { $_.action -eq $act -and $_.resource -eq '*' } | Select-Object -Last 1; if ($r) { $r.effect } else { 'deny' } }
+                [pscustomobject]@{ Agent = $a; edit = (& $eff 'edit'); shell = (& $eff 'shell'); 'shell partiel' = (@($p | Where-Object { $_.action -eq 'shell' -and $_.resource -ne '*' -and $_.effect -ne 'deny' } | ForEach-Object { "$($_.resource):$($_.effect)" }) -join ' ')
+                    Délégations = (@($p | Where-Object { $_.action -eq 'subagent' -and $_.effect -ne 'deny' } | ForEach-Object { "$($_.resource):$($_.effect)" }) -join ' ')
+                    MCP = (@($p | Where-Object { $_.action -like '*_*' -and $_.action -notlike 'external*' -and $_.effect -ne 'deny' } | ForEach-Object { "$($_.action):$($_.effect)" }) -join ' ') }
+            }
+            $rows | Format-Table -AutoSize -Wrap | Out-String -Width 220 | Write-Output
+            $gl = @(& $grants); Write-Output ("Autorisations persistantes local-ai : {0}" -f $gl.Count); if ($gl.Count) { $gl | Format-Table -AutoSize | Out-String -Width 220 | Write-Output }
+            try { $sv = Invoke-OcApi 'GET' '/api/permission/saved' ''; $n = ([regex]::Matches($sv, '"id":"')).Count; Write-Output ("Autorisations OpenCode « toujours » (par projet, révocables) : {0}" -f $n); foreach ($m in [regex]::Matches($sv, '"id":"([^"]+)"[^}]*?"action":"([^"]+)","resource":"([^"]*)"')) { Write-Output ("  saved {0} : {1} {2}" -f $m.Groups[1].Value, $m.Groups[2].Value, $m.Groups[3].Value) } } catch { Write-Output "Autorisations OpenCode : non lues ($($_.Exception.Message))" }
+            Write-Output 'Portées : once = « Autoriser une fois » dans le Web/TUI ; persistent = grant (local-ai) ou « Toujours » (OpenCode, par projet) ; session : non prise en charge par OpenCode 2.3.2.'
+        }
+        'check' {
+            if ($Args0.Count -lt 4) { throw 'Usage : .\local-ai.ps1 permissions check <agent> <action> <ressource>' }
+            $sess = Invoke-OcApi 'POST' '/api/session' ('{"title":"local-ai-permission-check","agent":"' + $Args0[1] + '"}')
+            $sid = [regex]::Match($sess, '"id":"(ses_[A-Za-z0-9]+)"').Groups[1].Value; if (-not $sid) { throw "session de contrôle non créée : $sess" }
+            try {
+                $res = ($Args0[3..($Args0.Count - 1)] -join ' ') -replace '\\', '\\' -replace '"', '\"' -replace "`n", '\n' -replace "`r", '\r' -replace "`t", '\t'
+                $r = Invoke-OcApi 'POST' "/api/session/$sid/permission" ('{"action":"' + $Args0[2] + '","resources":["' + $res + '"],"agent":"' + $Args0[1] + '"}')
+                $e = [regex]::Match($r, '"effect":"(\w+)"').Groups[1].Value; if (-not $e) { throw "évaluation impossible : $r" }
+                Write-Output ("{0} | {1} | {2} => {3}" -f $Args0[1], $Args0[2], ($Args0[3..($Args0.Count - 1)] -join ' '), $e.ToUpperInvariant())
+            } finally { [void](Invoke-OcApi 'DELETE' "/api/session/$sid" '') }
+        }
+        'grant' {
+            if ($Args0.Count -lt 4) { throw 'Usage : .\local-ai.ps1 permissions grant <agent|*> <action> <ressource> [--effect allow|ask] [--project <nom>] [--scope persistent]' }
+            $agent, $action, $res = $Args0[1], $Args0[2], $Args0[3]
+            $effect = if (& $opt '--effect') { & $opt '--effect' } else { 'allow' }; $scope = if (& $opt '--scope') { & $opt '--scope' } else { 'persistent' }; $project = & $opt '--project'
+            $why = @()
+            if ($scope -ne 'persistent') { $why += "portée '$scope' non prise en charge ici : 'once' = « Autoriser une fois » dans le Web/TUI ; 'session' non prise en charge par OpenCode 2.3.2" }
+            if ($agent -ne '*' -and $agentIds -notcontains $agent) { $why += "agent '$agent' inconnu" }
+            if ($agent -like '*-delegue') { $why += 'les variantes déléguées héritent des règles de base de leur agent (accorder à l''agent lui-même)' }
+            if ($effect -notin 'allow', 'ask') { $why += "effet '$effect' invalide (allow|ask ; utiliser revoke pour retirer)" }
+            if ($HardOnly -contains $action) { $why += "action '$action' : refus technique non surchargeable" }
+            elseif ($PermActions -notcontains $action -and $action -notmatch '^[a-z0-9-]+_\S+$') { $why += "action '$action' inconnue (actions : $($PermActions -join ', '), <serveur>_<outil>)" }
+            if ($res -match ',') { $why += 'ressource : virgule interdite' }
+            if ($project) { if ($action -notin 'read', 'grep', 'glob', 'edit') { $why += 'portée projet : uniquement read, grep, glob, edit' } elseif ($project -notmatch '^[A-Za-z0-9._-]+$') { $why += 'nom de projet invalide' } else { $res = "$project/$($res.TrimStart('/'))" } }
+            if ($action -eq 'subagent' -and $res -notlike '*-delegue') { $why += 'délégation : seules les variantes <agent>-delegue sont délégables (profondeur 1)' }
+            if ($action -like '*_*' -and $action -notin $PermActions) { $srv = ($action -split '_')[0]; if (-not (@((Get-Content $cfgFile -Raw | ConvertFrom-Json).mcp.servers.PSObject.Properties | ForEach-Object Name) -contains $srv)) { $why += "MCP '$srv' non activé" } }
+            $hard = @((Get-Content $cfgFile -Raw -Encoding UTF8 | ConvertFrom-Json).permissions | Where-Object { $_.effect -eq 'deny' -and $_.action -eq $action })
+            foreach ($h in $hard) { if ((Test-WildMatch $h.resource $res) -or (Test-WildMatch $res $h.resource.Trim('*'))) { $why += "ressource '$res' couverte par le refus technique '$($h.action) $($h.resource)' (non surchargeable)" } }
+            if ($why) { Write-Audit 'permissions.grant' "$agent $action $res" 'refusé' ($why -join ' ; '); throw ("Autorisation REFUSÉE :`n - " + ($why -join "`n - ")) }
+            $list = @(& $grants); $g = [pscustomobject][ordered]@{ id = 'g' + (Get-Date -Format 'yyyyMMddHHmmss'); agent = $agent; action = $action; resource = $res; effect = $effect; project = $(if ($project) { $project } else { '*' }); created = (Get-Date -Format 's') }
+            & $saveGrants (@($list) + $g)
+            Write-Audit 'permissions.grant' "$agent $action $res" $effect $g.id
+            Write-Output (& $apply "Autorisation $($g.id) : $agent $action $res -> $effect (persistante)")
+        }
+        'revoke' {
+            if ($Args0.Count -lt 2) { throw 'Usage : .\local-ai.ps1 permissions revoke <id-autorisation> | revoke saved <id>' }
+            if ($Args0[1] -eq 'saved') { $r = Invoke-OcApi 'DELETE' "/api/permission/saved/$($Args0[2])" ''; Write-Audit 'permissions.revoke' "saved $($Args0[2])" 'révoqué'; Write-Output "Autorisation OpenCode $($Args0[2]) révoquée. $r"; return }
+            $list = @(& $grants); $keep = @($list | Where-Object id -ne $Args0[1]); if ($keep.Count -eq $list.Count) { throw "Autorisation '$($Args0[1])' introuvable." }
+            & $saveGrants $keep; Write-Audit 'permissions.revoke' $Args0[1] 'révoqué'
+            Write-Output (& $apply "Autorisation $($Args0[1]) révoquée")
+        }
+        'reset' {
+            $who = if ($Args0.Count -ge 2) { $Args0[1] } else { 'all' }
+            $list = @(& $grants); $keep = @(if ($who -ne 'all') { $list | Where-Object agent -ne $who })
+            & $saveGrants $keep
+            $nSaved = 0; if ($who -eq 'all') { try { $sv = Invoke-OcApi 'GET' '/api/permission/saved' ''; foreach ($m in [regex]::Matches($sv, '"id":"([^"]+)"')) { [void](Invoke-OcApi 'DELETE' "/api/permission/saved/$($m.Groups[1].Value)" ''); $nSaved++ } } catch { } }
+            Write-Audit 'permissions.reset' $who 'réinitialisé' "local-ai: $($list.Count - $keep.Count), OpenCode: $nSaved"
+            Write-Output (& $apply ("Réinitialisation {0} : {1} autorisation(s) local-ai et {2} autorisation(s) OpenCode retirées" -f $who, ($list.Count - $keep.Count), $nSaved))
+        }
+        'profile' {
+            if ($Args0.Count -lt 2) { Write-Output "Profil de sécurité actif : $(Get-SecProfile)"; return }
+            $p = $Args0[1].ToUpperInvariant(); if ($p -notmatch '^S[1-4]$') { throw 'Profil inconnu (S1, S2, S3, S4).' }
+            if ($p -eq 'S3' -and $Args0 -notcontains '--confirm') { throw 'S3 (édition et commandes sans validation dans le workspace) exige --confirm.' }
+            $df = Join-Path $Root 'profiles\defaults.yaml'; $t = [IO.File]::ReadAllText($df, $u)
+            $t = [regex]::Replace($t, '(?ms)(^desired:.*?^\s+security:\s*)S[1-4]', '${1}' + $p, 1); $t = [regex]::Replace($t, '(?ms)(^applied:.*?^\s+security:\s*\r?\n\s+profile:\s*)S[1-4]', '${1}' + $p, 1)
+            $bk = New-AgentRestorePoint 'profile' @($df, $cfgFile); [IO.File]::WriteAllText($df, $t, $u)
+            try { $m = Invoke-OpenCodeReload } catch { Restore-AgentRestorePoint $bk; try { [void](Invoke-OpenCodeReload) } catch { }; throw "ÉCHEC — ROLLBACK ($($_.Exception.Message))" }
+            Write-Audit 'permissions.profile' $p 'appliqué'; Write-Output "Profil de sécurité $p appliqué | $m"
+        }
+        default { Write-Error ("Sous-commande 'permissions {0}' NON IMPLÉMENTÉE (list, check, grant, revoke, reset, profile)." -f $sub) -ErrorAction Continue; exit 2 }
+    }
+}
+
+# ------------------------------------------------------------------ arrêt d'urgence
+function Invoke-EmergencyStop {
+    param([string[]]$Args0)
+    $sub = if ($Args0 -and $Args0[0]) { $Args0[0].ToLowerInvariant() } else { 'stop' }
+    switch ($sub) {
+        'status' { if (Test-Path $EmergencyFlag) { Write-Output "ARRÊT D'URGENCE ACTIF : $(Get-Content $EmergencyFlag -Raw)" } else { Write-Output "Aucun arrêt d'urgence actif." } }
+        'clear' {
+            if (-not (Test-Path $EmergencyFlag)) { Write-Output "Aucun arrêt d'urgence actif."; return }
+            Remove-Item $EmergencyFlag -Force; Write-Audit 'emergency.clear' 'local-ai' 'levé'
+            Write-Output "Arrêt d'urgence levé. Redémarrage explicite : .\local-ai.ps1 start opencode (les MCP restent arrêtés ; mcp enable pour les relancer)."
+        }
+        'stop' {
+            $steps = @()
+            $dir = Split-Path $EmergencyFlag; if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Force $dir | Out-Null }
+            [IO.File]::WriteAllText($EmergencyFlag, (([ordered]@{ ts = (Get-Date).ToString('o'); by = 'local-ai.ps1 emergency-stop' }) | ConvertTo-Json -Compress), (New-Object Text.UTF8Encoding $false))
+            # 1. sessions actives interrompues (aucune suppression)
+            try { $act = Invoke-OcApi 'GET' '/api/session/active' ''; $ids = @([regex]::Matches($act, '"(ses_[A-Za-z0-9]+)"') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique); foreach ($s in $ids) { [void](Invoke-OcApi 'POST' "/api/session/$s/interrupt" '') }; $steps += "sessions interrompues : $($ids.Count)" } catch { $steps += 'sessions : OpenCode déjà arrêté' }
+            # 2. relais MCP arrêtés (conteneurs conservés, réseau N4 coupé de fait)
+            $mcp = @((Invoke-Native docker @('ps', '-q', '--filter', 'label=local-ai.module=mcp')).Output -split "`n" | Where-Object { $_ })
+            if ($mcp.Count) { [void](Invoke-Native docker (@('stop', '-t', '5') + $mcp)) }; $steps += "relais MCP arrêtés : $($mcp.Count)"
+            # 3. agents arrêtés (OpenCode et son espace réseau)
+            $r = Invoke-Native docker @('compose', '-f', (Join-Path $Root 'compose.yaml'), '--profile', 'ollama', '--profile', 'opencode', 'stop', '-t', '10', 'opencode', 'opencode-net'); $steps += "OpenCode arrêté (code $($r.Code))"
+            # 4. modèles déchargés (Ollama reste disponible, interne)
+            try { $c = Get-OllamaContainer; $loaded = @((Invoke-Native docker @('exec', $c, '/bin/ollama', 'ps')).Output -split "`n" | Select-Object -Skip 1 | Where-Object { $_.Trim() } | ForEach-Object { ($_ -split '\s+')[0] }); foreach ($m in $loaded) { [void](Invoke-Native docker @('exec', $c, '/bin/ollama', 'stop', $m)) }; $steps += "modèles déchargés : $($loaded.Count)" } catch { $steps += 'Ollama : arrêté' }
+            Write-Audit 'emergency.stop' 'local-ai' 'exécuté' ($steps -join ' ; ')
+            Write-Output ("ARRÊT D'URGENCE : " + ($steps -join ' | ') + " | aucune donnée supprimée ; démarrages bloqués jusqu'à .\local-ai.ps1 emergency-stop clear")
+        }
+        default { Write-Error "Sous-commande 'emergency-stop $sub' inconnue (status, clear)." -ErrorAction Continue; exit 2 }
+    }
+}
+
 switch ($Command.ToLowerInvariant()) {
+    'permissions'    { try { Invoke-Permissions $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
+    'emergency-stop' { try { Invoke-EmergencyStop $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
     'agent'  { try { Invoke-Agent $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
     'mcp'    { try { Invoke-Mcp $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
     'tui'    { try { Start-Tui } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }

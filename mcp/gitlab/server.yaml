@@ -4,7 +4,7 @@ id: gitlab
 name: GitLab
 enabled: false
 status: prepared
-activation: not_implemented
+activation: n4-relay-untested   # 10.B.1 : relais distant généré ; non testé contre l'origine réelle (aucune connexion externe sans accord)
 official: true
 image: null            # serveur intégré à GitLab (aucune image) ; accès via relais N4 à définir
 transport: http
@@ -24,3 +24,11 @@ egress_allowlist: ["gitlab.com:443"]
 env_file: secrets/mcp-gitlab.env
 compose_template: compose/templates/mcp.yaml
 opencode_snippet: opencode.snippet.json
+# Architecture N4 (10.B.1) — relais vers le serveur MCP distant officiel (pas d'OAuth interactif : jeton PAT injecté par le relais).
+n4:
+  relay_type: remote-http
+  origin: "https://gitlab.com"
+  path: /api/v4/mcp
+  egress_allowlist: [gitlab.com:443]
+  auth_header: "Bearer {TOKEN}"
+  secret_var: GITLAB_MCP_TOKEN

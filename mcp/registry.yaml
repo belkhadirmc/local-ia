@@ -1,5 +1,5 @@
 # Registre MCP — serveurs officiels PRÉPARÉS en 7.B.1, tous DÉSACTIVÉS. Aucun compte connecté, aucun jeton créé.
-# Gestion : .\local-ai.ps1 mcp list | status | enable <id> | disable <id> (enable refuse tant que N4 n'est pas implémenté).
+# Gestion : local-ai.ps1 mcp list | status | enable <id> --authorize-n4 [--witness] | disable <id> [--revoke]
 schema: local-ai/mcp-registry/v1
 default:
   enabled: false
@@ -7,19 +7,21 @@ default:
   network_profile_required: N4
   security: ask
 architecture_n4:
-  status: not_implemented
-  principle: "OpenCode reste sans route Internet (N1) ; chaque serveur MCP autorisé tourne dans son propre conteneur"
-  client_side: "opencode -> réseau interne local-ai-mcp-relay (à créer) -> relais MCP HTTP du serveur (http://mcp-<id>:8080/mcp, jeton local)"
-  server_side: "relais / serveur MCP sur local-ai-mcp (sortie Internet limitée à egress_allowlist), secrets/mcp-<id>.env monté en env_file"
-  hardening: "uid non root, racine en lecture seule, cap_drop ALL, no-new-privileges, aucun socket Docker, image épinglée nom:version@sha256"
-  blocking: "aucune image de relais MCP autorisée ni filtrage de sortie par destination disponible sans téléchargement/construction : activation refusée"
+  status: implemented   # 10.B.1 (scripts/mcp/n4.ps1)
+  principle: "OpenCode et Ollama sans route Internet ; un relais, un serveur et un proxy de sortie par serveur MCP, chacun sur ses réseaux internes"
+  flow_container_http: "opencode -> local-ai-mcp-relay (interne) -> mcp-relay-<id> (squid, chemin MCP seul, jeton injecté) -> local-ai-mcp-srv-<id> (interne) -> mcp-<id> (image officielle, lecture seule) -> mcp-egress-<id> (squid, CONNECT liste blanche) -> local-ai-mcp (N4)"
+  flow_remote_http: "opencode -> mcp-relay-<id> -> mcp-egress-<id> (origine HTTPS fixe) -> local-ai-mcp (N4)"
+  images: ["ubuntu/squid:6.6-24.04_edge@sha256:d588976774988e439af518940316004280dec80772c19af1cc33ae39afa5d2eb", "ghcr.io/github/github-mcp-server:v2.3.0@sha256:110ce018ce2a559b3d552673e675806ad9c2abbc1749360d41289ea415c67926"]
+  hardening: "uid non root (13 squid, 65532 serveur), racine en lecture seule, tmpfs, cap_drop ALL, no-new-privileges, mémoire et pids limités, aucun socket Docker, projet Compose dédié local-ai-mcp-<id>"
+  secrets: "secrets/mcp-<id>.env (jeton de l utilisateur) -> secrets/mcp-<id>.relay-auth.conf (copie pour le relais, supprimée par disable --revoke)"
+  test_mode: "--witness : jeton fictif, destinations et réseau N4 remplacés par des services locaux (aucune connexion externe)"
 servers:
   - id: github
     name: GitHub
     enabled: false
     status: prepared
-    activation: not_implemented
-    transport: stdio
+    activation: n4-relay
+    transport: http
     definition: github/server.yaml
     permissions: github/permissions.yaml
     secrets: secrets/mcp-github.env
@@ -27,7 +29,7 @@ servers:
     name: GitLab
     enabled: false
     status: prepared
-    activation: not_implemented
+    activation: n4-relay-untested
     transport: http
     definition: gitlab/server.yaml
     permissions: gitlab/permissions.yaml
@@ -36,7 +38,7 @@ servers:
     name: Jira
     enabled: false
     status: prepared
-    activation: not_implemented
+    activation: n4-relay-untested
     transport: http
     definition: jira/server.yaml
     permissions: jira/permissions.yaml
@@ -45,7 +47,7 @@ servers:
     name: Confluence
     enabled: false
     status: prepared
-    activation: not_implemented
+    activation: n4-relay-untested
     transport: http
     definition: confluence/server.yaml
     permissions: confluence/permissions.yaml

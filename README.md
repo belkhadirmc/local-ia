@@ -4,7 +4,8 @@ Infrastructure de développement multi-agent locale : Docker Desktop (WSL2), Oll
 État (9.B.1) : **Ollama 0.40.18** (CPU, réseau interne, aucun port publié) avec **7 modèles** (52,98 Gio, aucun chargé au repos, benchmarks 6.B.1) ;
 **OpenCode 2.3.2** sur `http://127.0.0.1:4096` (authentification locale, sans accès Internet, fournisseur Ollama interne uniquement) ;
 **10 agents** finalisés (9 dans OpenCode, Assistant par défaut ; autocomplétion Continue à l'étape 11), permissions S2 et délégations de profondeur 1 appliquées par le serveur ; raisonnement des modèles qwen3.5 désactivé dans OpenCode (9.B.2 : premier message ≈ 110 s à froid, puis ≈ 10 s) ;
-MCP GitHub, GitLab, Jira, Confluence **préparés et désactivés**.
+sécurité S1–S4 (S2 par défaut), permissions gérées, refus techniques prioritaires, arrêt d'urgence et journal d'audit (10.B.1) ;
+MCP GitHub, GitLab, Jira, Confluence **préparés et désactivés**, architecture N4 (relais isolés, sortie filtrée par destination) prête.
 
 ## Arborescence
 
@@ -33,7 +34,11 @@ MCP GitHub, GitLab, Jira, Confluence **préparés et désactivés**.
 .\local-ai.ps1 tui                       # interface terminal OpenCode (Web : http://127.0.0.1:4096, utilisateur opencode)
 .\local-ai.ps1 model list                # modèles présents vs registre
 .\local-ai.ps1 model show <tag>          # détails d'un modèle référencé
-.\local-ai.ps1 mcp list|status           # serveurs MCP préparés (enable refusé tant que N4 non implémenté)
+.\local-ai.ps1 mcp list|status           # serveurs MCP et relais N4
+.\local-ai.ps1 mcp enable <id> --authorize-n4 [--witness]   # active un MCP (jeton requis) ; --witness = test local sans connexion
+.\local-ai.ps1 mcp disable <id> [--revoke]                  # arrête et supprime les relais ; --revoke retire la copie du jeton
+.\local-ai.ps1 permissions list|check|grant|revoke|reset|profile   # S1-S4, autorisations persistantes, évaluation sans inférence
+.\local-ai.ps1 emergency-stop [status|clear]                # interrompt sessions, agents et MCP ; décharge les modèles (sans suppression)
 .\local-ai.ps1 agent list                # agents, modèles, écarts à l'affectation initiale, avertissements outils/RAM
 .\local-ai.ps1 agent model <agent> [<modèle>]   # afficher / changer durablement (BK1 + rollback, OpenCode régénéré)
 .\local-ai.ps1 agent reset <agent|all>   # revenir aux affectations initiales (agents/assignments.initial.yaml)
@@ -42,8 +47,8 @@ MCP GitHub, GitLab, Jira, Confluence **préparés et désactivés**.
 Sélection **temporaire** d'un modèle : sélecteur de la session dans le Web ou le TUI (7 modèles du registre).
 OpenCode Desktop (Windows) : **non utilisé** — il impose un serveur autonome sur l'hôte avec accès Internet (ADR-0008, R9).
 
-Mot de passe Web/API : `secrets/opencode.env` (non versionné). Les autres commandes (`profile`, `agent`, `monitor`, `permissions`,
-`backup`, `restore`, `maintenance`, `emergency-stop`) sont prévues et échouent explicitement tant qu'elles ne sont pas implémentées.
+Mot de passe Web/API : `secrets/opencode.env` (non versionné). Les autres commandes (`profile`, `monitor`,
+`backup`, `restore`, `maintenance`) sont prévues et échouent explicitement tant qu'elles ne sont pas implémentées.
 
 ## Profils par défaut
 

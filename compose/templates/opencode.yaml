@@ -42,7 +42,7 @@ services:
     user: "1000:1000"
     entrypoint: ["/bin/busybox", "sleep", "2147483647"]
     command: []
-    networks: [local-ai-core, local-ai-localhost]
+    networks: [local-ai-core, local-ai-localhost, local-ai-mcp-relay]
     ports:
       - "127.0.0.1:4096:4096"
     read_only: true
@@ -147,6 +147,14 @@ networks:
     labels:
       local-ai.network: localhost
       local-ai.authorization: required
+  # 10.B.1 : réseau interne vers les relais MCP N4 (aucune route ; seuls les relais mcp-relay-<id> y sont attachés)
+  local-ai-mcp-relay:
+    name: local-ai-mcp-relay
+    driver: bridge
+    internal: true
+    labels:
+      local-ai.network: mcp-relay
+      local-ai.authorization: none
 
 volumes:
   local-ai-opencode:

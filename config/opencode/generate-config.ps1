@@ -40,6 +40,46 @@ foreach ($b in ([regex]::Split($reg, '(?m)^\s*-\s+id:\s*') | Select-Object -Skip
     if ($ReasoningEffort.ContainsKey($fam)) { $models[$tag].body = [ordered]@{ reasoning_effort = $ReasoningEffort[$fam] } }
 }
 
+# --- profil de sécurité actif (profiles/defaults.yaml, desired.security ; S2 par défaut)
+$defaults = [IO.File]::ReadAllText((Join-Path $Root 'profiles\defaults.yaml'), $Utf8)
+$SecProfile = [regex]::Match($defaults, '(?ms)^desired:.*?^\s+security:\s*(S[1-4])').Groups[1].Value
+if (-not $SecProfile) { $SecProfile = 'S2' }
+# Effet appliqué à une capacité prévue par la définition (jamais d'élargissement d'une capacité refusée par la définition).
+function Get-Effect([string]$Kind, [string]$DefEffect) {
+    if ($DefEffect -eq 'deny') { return 'deny' }
+    switch ($SecProfile) {
+        'S3' { switch ($Kind) { 'mcp' { 'ask' } default { 'allow' } } }
+        'S2' { switch ($Kind) { 'git-read' { 'allow' } default { 'ask' } } }
+        default { switch ($Kind) { 'mcp' { 'deny' } default { 'ask' } } }   # S1 et S4 (S4 hérite de S1)
+    }
+}
+# Autorisations persistantes (config/security/grants.yaml) + surcharges S4 (profiles/custom/*.yaml) ; jamais prioritaires sur $HardDeny.
+$GrantRules = @()
+foreach ($gf in @((Join-Path $Root 'config\security\grants.yaml')) + @(if ($SecProfile -eq 'S4') { Get-ChildItem (Join-Path $Root 'profiles\custom') -Filter *.yaml -ErrorAction SilentlyContinue | ForEach-Object FullName })) {
+    if (-not (Test-Path $gf)) { continue }
+    foreach ($m in [regex]::Matches([IO.File]::ReadAllText($gf, $Utf8), '(?m)^\s*-\s*\{([^}\r\n]*)\}')) {
+        $kv = @{}; foreach ($p in ($m.Groups[1].Value -split ',')) { if ($p -match '^\s*(\w+):\s*"?([^"]*)"?\s*$') { $kv[$Matches[1]] = $Matches[2] } }
+        if ($kv.agent -and $kv.action -and $kv.resource -and $kv.effect -in 'allow', 'ask', 'deny') { $GrantRules += [pscustomobject]$kv }
+    }
+}
+function Get-Grants([string]$AgentId) { foreach ($g in $GrantRules) { if ($g.agent -in '*', $AgentId) { Rule $g.action $g.resource $g.effect } } }
+# Refus techniques prioritaires (ajoutés en dernier : « la dernière règle correspondante l'emporte »).
+$HardDeny = @()
+foreach ($p in '*git push*', '*sudo*', '*curl*', '*wget*', 'nc *', '* nc *', '*ssh *', '*scp *', '*/proc/*', '*environ*', '*OPENCODE_PASSWORD*', '*opencode api*', '*opencode run*', '*opencode serve*', '*:4096*', '*mcp-relay*', '*mcp-egress*', '*docker*') { $HardDeny += Rule 'shell' $p 'deny' }
+foreach ($a in 'webfetch', 'websearch', 'external_directory') { $HardDeny += Rule $a '*' 'deny' }
+foreach ($a in 'read', 'edit') { foreach ($p in '*.env', '*.env.*', '*secrets*', '/proc/*', '*/proc/*', '/etc/opencode/*') { $HardDeny += Rule $a $p 'deny' } }
+# MCP activés : registre (enabled: true, activation réelle) ou relais témoin local en cours (runtime/mcp/<id>/witness).
+$McpEnabled = [ordered]@{}
+$mreg = [IO.File]::ReadAllText((Join-Path $Root 'mcp\registry.yaml'), $Utf8)
+foreach ($b in ([regex]::Split($mreg, '(?m)^\s*-\s+id:\s*') | Select-Object -Skip 1)) {
+    $sid = ($b -split '\s')[0]
+    $on = (Get-Val $b 'enabled') -eq 'true' -or (Test-Path (Join-Path $Root "runtime\mcp\$sid\witness"))
+    if ($on) {
+        $st = [IO.File]::ReadAllText((Join-Path $Root "mcp\$sid\server.yaml"), $Utf8)
+        $McpEnabled[$sid] = "http://mcp-relay-${sid}:8080" + [regex]::Match($st, '(?ms)^n4:.*?^\s+path:\s*(\S+)').Groups[1].Value
+    }
+}
+
 # --- agents (Continue exclu : autocomplétion hors OpenCode)
 $agents = [ordered]@{}; $delegMap = [ordered]@{}; $subs = [ordered]@{}; $DelegSuffix = '-delegue'
 $Common = [IO.File]::ReadAllText((Join-Path $Root 'agents\prompts\_common.md'), $Utf8).Trim()
@@ -57,20 +97,26 @@ foreach ($f in (Get-ChildItem (Join-Path $Root 'agents\definitions') -Filter *.y
     $depth = Get-Val $t 'max_depth'
     if ($deleg.Count -and $depth -ne '1') { throw "Agent $id : max_depth doit valoir 1 (trouvé '$depth')." }
     $delegMap[$id] = $deleg
+    $authorizable = @(Get-List $t 'authorizable')
+    # Règles : base deny -> outils de la définition (effet selon le profil) -> autorisations accordées -> REFUS TECHNIQUES (dernier = prioritaire).
     $rules = New-Object System.Collections.Generic.List[object]
     $rules.Add((Rule '*' '*' 'deny')); $rules.Add((Rule 'question' '*' 'allow'))
     foreach ($tl in 'read', 'grep', 'glob') { if ($tools -contains $tl) { $rules.Add((Rule $tl '*' $(if ($perm.read -eq 'allow') { 'allow' } else { 'ask' }))) } }
-    if ($tools -contains 'edit' -or $tools -contains 'write') { $rules.Add((Rule 'edit' '*' $(if ($perm.edit -in 'allow', 'ask') { 'ask' } else { 'deny' }))) }
-    if ($tools -contains 'bash' -and $perm.bash -ne 'deny') { $rules.Add((Rule 'shell' '*' 'ask')) }
-    elseif ($tools -contains 'test') { foreach ($p in 'npm test*', 'pytest*', 'python -m pytest*', 'go test*', 'cargo test*', 'make test*', 'bash -n *') { $rules.Add((Rule 'shell' $p 'ask')) } }
-    if ($tools -contains 'git-read') { foreach ($p in 'git status*', 'git diff*', 'git log*', 'git show*') { $rules.Add((Rule 'shell' $p 'allow')) } }
-    # Délégations : refus par défaut ; seules les variantes « <cible>-delegue » déclarées sont autorisées (S2 : delegation allow).
+    if ($tools -contains 'edit' -or $tools -contains 'write') { $rules.Add((Rule 'edit' '*' (Get-Effect 'edit' $perm.edit))) }
+    if ($tools -contains 'bash' -and $perm.bash -ne 'deny') { $rules.Add((Rule 'shell' '*' (Get-Effect 'shell' $perm.bash))) }
+    elseif ($tools -contains 'test') { foreach ($p in 'npm test*', 'pytest*', 'python -m pytest*', 'go test*', 'cargo test*', 'make test*', 'bash -n *') { $rules.Add((Rule 'shell' $p (Get-Effect 'shell' 'ask'))) } }
+    if ($tools -contains 'git-read') { foreach ($p in 'git status*', 'git diff*', 'git log*', 'git show*') { $rules.Add((Rule 'shell' $p (Get-Effect 'git-read' 'allow'))) } }
+    # 10.B.1 : OpenCode compare des préfixes sans découper les commandes composées (« git status; rm -rf x » était autorisé).
+    # Toute commande composée, redirigée ou substituée retombe sur l'effet shell de base de l'agent (deny ou ask), jamais sur un allow partiel.
+    $baseShell = if ($tools -contains 'bash' -and $perm.bash -ne 'deny') { Get-Effect 'shell' $perm.bash } else { 'deny' }
+    foreach ($p in '*;*', '*&*', '*|*', '*`*', '*$(*', '*>*', '*<*', "*`n*", "*`r*", '*--output*', '*--ext-diff*', '*-c core.*') { $rules.Add((Rule 'shell' $p $baseShell)) }
+    # MCP : outils des seuls serveurs activés ET autorisables pour l'agent (sinon refus par la règle de base).
+    foreach ($s in $McpEnabled.Keys) { if ($authorizable -contains $s -and $perm.mcp -ne 'deny') { $rules.Add((Rule "${s}_*" '*' (Get-Effect 'mcp' $perm.mcp))) } }
     $rules.Add((Rule 'subagent' '*' 'deny'))
-    foreach ($p in 'git push*', 'sudo *', 'curl *', 'wget *') { $rules.Add((Rule 'shell' $p 'deny')) }
-    foreach ($a in 'webfetch', 'websearch', 'external_directory') { $rules.Add((Rule $a '*' 'deny')) }
-    $rules.Add((Rule 'read' '*.env' 'deny')); $rules.Add((Rule 'read' '*secrets*' 'deny'))
-    $base = $rules.ToArray()
-    foreach ($d in $deleg) { $rules.Add((Rule 'subagent' "$d$DelegSuffix" 'allow')) }
+    foreach ($g in (Get-Grants $id)) { $rules.Add($g) }
+    $base = @($rules.ToArray()) + $HardDeny
+    foreach ($d in $deleg) { $rules.Add((Rule 'subagent' "$d$DelegSuffix" (Get-Effect 'delegation' 'allow'))) }
+    foreach ($h in $HardDeny) { $rules.Add($h) }
     $label = "$(Get-Val $t 'name') — $(Get-Val $t 'role')"
     $sys = $prompt
     if ($deleg.Count) { $sys += "`n`nIdentifiants de délégation (outil subagent, une tâche à la fois) : " + (($deleg | ForEach-Object { "$_$DelegSuffix" }) -join ', ') + '.' }
@@ -108,17 +154,13 @@ $cfg = [ordered]@{
     providers     = [ordered]@{ ollama = [ordered]@{ name = 'Ollama (local-ai, interne)'; settings = [ordered]@{ baseURL = 'http://ollama:11434/v1'; timeout = $false; headerTimeout = 1500000; chunkTimeout = 600000 }; models = $models } }
     policies      = @(
         (Rule 'provider.use' '*' 'deny'), (Rule 'provider.use' 'ollama' 'allow'),
-        (Rule 'websearch.use' '*' 'deny'), (Rule 'mcp.use' '*' 'deny'),
+        (Rule 'websearch.use' '*' 'deny'), (Rule 'mcp.use' '*' 'deny')) + @($McpEnabled.Keys | ForEach-Object { Rule 'mcp.use' $_ 'allow' }) + @(
         (Rule 'integration.connect' '*' 'deny'), (Rule 'integration.use' '*' 'deny'),
         (Rule 'integration.connect' 'ollama' 'allow'), (Rule 'integration.use' 'ollama' 'allow')
     )
-    permissions   = @(
-        (Rule '*' '*' 'ask'), (Rule 'read' '*' 'allow'), (Rule 'glob' '*' 'allow'), (Rule 'grep' '*' 'allow'),
-        (Rule 'webfetch' '*' 'deny'), (Rule 'websearch' '*' 'deny'), (Rule 'external_directory' '*' 'deny'),
-        (Rule 'shell' 'git push*' 'deny'), (Rule 'shell' 'sudo *' 'deny'),
-        (Rule 'read' '*.env' 'deny'), (Rule 'read' '*secrets*' 'deny')
-    )
-    mcp           = [ordered]@{ servers = [ordered]@{} }
+    permissions   = @((Rule '*' '*' 'ask'), (Rule 'read' '*' 'allow'), (Rule 'glob' '*' 'allow'), (Rule 'grep' '*' 'allow')) + $HardDeny
+    mcp           = [ordered]@{ servers = $(
+            $srv = [ordered]@{}; foreach ($s in $McpEnabled.Keys) { $srv[$s] = [ordered]@{ type = 'remote'; url = $McpEnabled[$s]; oauth = $false } }; $srv) }
     agents        = $agents
 }
 $json = ($cfg | ConvertTo-Json -Depth 12) -replace '\\u0027', "'" -replace '\\u003c', '<' -replace '\\u003e', '>' -replace '\\u0026', '&'

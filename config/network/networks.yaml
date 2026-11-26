@@ -24,6 +24,16 @@ networks:
     authorization: required
     profile: N4
     defined_in: compose/overrides/mcp.yaml
+  - name: local-ai-mcp-relay
+    internal: true
+    authorization: none
+    note: "opencode-net + relais MCP N4 uniquement (10.B.1)"
+    defined_in: compose/templates/opencode.yaml
+  - name: "local-ai-mcp-srv-<id>"
+    internal: true
+    authorization: required
+    note: "relais, serveur et proxy de sortie d un MCP (projet local-ai-mcp-<id>)"
+    defined_in: scripts/mcp/n4.ps1
   - name: local-ai-localhost
     internal: false
     authorization: required

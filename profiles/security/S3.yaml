@@ -22,4 +22,4 @@ always_deny:
   - "montage global Windows"
 limits:
   workspace_only: true
-  max_delegation_depth: 2
+  max_delegation_depth: 1   # imposée techniquement (variantes <agent>-delegue, R11)

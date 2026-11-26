@@ -4,14 +4,14 @@ id: github
 name: GitHub
 enabled: false
 status: prepared
-activation: not_implemented   # N4 non implémenté : `local-ai.ps1 mcp enable github` refuse explicitement
+activation: n4-relay   # 10.B.1 : relais isolé + proxy de sortie filtré ; activation : local-ai.ps1 mcp enable github --authorize-n4 (jeton requis)
 official: true
 # Option retenue : serveur local officiel (stdio) en conteneur dédié sur local-ai-mcp (N4), lecture seule.
 image: "ghcr.io/github/github-mcp-server:v2.3.0@sha256:110ce018ce2a559b3d552673e675806ad9c2abbc1749360d41289ea415c67926"
 image_index_digest: "sha256:f8ee4dedc7d5c8cb32854ab91cc92a31c55a8a5510708cf8742e9f9427588ca6"
 image_pulled: false
 platform: linux/amd64
-transport: stdio
+transport: http   # serveur officiel en mode « http » derrière le relais N4 (stdio non utilisé)
 command: ["github-mcp-server", "stdio", "--read-only", "--toolsets", "context,repos,issues,pull_requests"]
 environment:
   GITHUB_READ_ONLY: "1"
@@ -33,3 +33,14 @@ egress_allowlist: ["api.github.com:443", "github.com:443"]
 env_file: secrets/mcp-github.env
 compose_template: compose/templates/mcp.yaml
 opencode_snippet: opencode.snippet.json
+# Architecture N4 (10.B.1) — utilisée par local-ai.ps1 mcp enable (scripts/mcp/n4.ps1).
+n4:
+  relay_type: container-http
+  image: "ghcr.io/github/github-mcp-server:v2.3.0@sha256:110ce018ce2a559b3d552673e675806ad9c2abbc1749360d41289ea415c67926"
+  command: [http, --port, "8082", --read-only, --toolsets, context, --toolsets, repos, --toolsets, issues, --toolsets, pull_requests]
+  upstream_port: 8082
+  path: /mcp
+  egress_allowlist: [api.github.com:443]
+  auth_header: "Bearer {TOKEN}"
+  secret_var: GITHUB_PERSONAL_ACCESS_TOKEN
+  environment: [GITHUB_READ_ONLY=1]
