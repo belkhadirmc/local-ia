@@ -52,7 +52,9 @@ modules:
     provider: "ollama interne uniquement, 7 modèles, contexte 8192 max"
     agents: "9 (affectations initiales, non confirmées ; référence agents/assignments.initial.yaml ; gestion local-ai.ps1 agent)"
     clients: "Web et TUI ; Desktop Windows bloqué (serveur autonome imposé, ADR-0008)"
-    verified: "2026-11-26 (actions 7.B.1, 8.B.1)"
+    delegation: "explicite (allow), cibles = variantes cachées <agent>-delegue sans délégation : profondeur 1 imposée (ADR-0009)"
+    builtin_agents_disabled: [build, plan, general, explore]
+    verified: "2026-11-26 (actions 7.B.1, 8.B.1, 9.B.1)"
   mcp:
     status: prepared
     enabled: 0

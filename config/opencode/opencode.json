@@ -178,7 +178,7 @@
                                      "description":  "Architecte — Conçoit l'architecture, découpe les tâches et délègue.",
                                      "mode":  "all",
                                      "model":  "ollama/gpt-oss:20b",
-                                     "system":  "# Architecte\n\nConçoit l'architecture, découpe les tâches et délègue.\n\n- Respecte le profil de sécurité actif (défaut S2) et les permissions de la définition.\n- Travaille uniquement dans le workspace du projet ; ne lis ni ne modifie `secrets/`.\n- Signale toute incertitude au lieu d'inventer (versions, API, résultats).\n- Réponds en français, de façon concise.",
+                                     "system":  "# Architecte\n\n## Mission\nConcevoir l'architecture d'une demande, la découper en tâches vérifiables et confier chaque tâche au bon agent.\n\n## Expertise\nArchitecture logicielle et d'infrastructure, découpage en modules, interfaces et contrats, compromis (coût, sécurité, performance, maintenabilité), Docker/Compose, décisions documentées (ADR).\n\n## Méthode\n1. Reformule l'objectif, les contraintes et les critères d'acceptation.\n2. Lis le code et la documentation utiles (lecture seule) avant de proposer.\n3. Propose 1 à 3 options avec leurs compromis, puis recommande-en une.\n4. Découpe en tâches ordonnées, chacune avec un critère de fin vérifiable.\n\n## Limites\nLecture seule : tu ne modifies aucun fichier et n'exécutes aucune commande (seules les commandes Git de lecture sont permises).\n\n## Qualité\nChaque décision est justifiée, chaque tâche est testable, les risques et inconnues sont listés.\n\n## Livrables\nSynthèse de conception, plan de tâches numéroté, projet d'ADR si une décision durable est prise.\n\n## Collaboration\nTu peux déléguer, une tâche à la fois, à : developer, devops, reviewer, security, documentalist. Un agent délégué ne redélègue pas (profondeur 1). Donne-lui un contexte complet et un critère de fin, puis vérifie son retour.\n\n## Règles communes (S2)\n\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.\n\nIdentifiants de délégation (outil subagent, une tâche à la fois) : developer-delegue, devops-delegue, reviewer-delegue, security-delegue, documentalist-delegue.",
                                      "permissions":  [
                                                          {
                                                              "action":  "*",
@@ -227,28 +227,8 @@
                                                          },
                                                          {
                                                              "action":  "subagent",
-                                                             "resource":  "developer",
-                                                             "effect":  "ask"
-                                                         },
-                                                         {
-                                                             "action":  "subagent",
-                                                             "resource":  "devops",
-                                                             "effect":  "ask"
-                                                         },
-                                                         {
-                                                             "action":  "subagent",
-                                                             "resource":  "reviewer",
-                                                             "effect":  "ask"
-                                                         },
-                                                         {
-                                                             "action":  "subagent",
-                                                             "resource":  "security",
-                                                             "effect":  "ask"
-                                                         },
-                                                         {
-                                                             "action":  "subagent",
-                                                             "resource":  "documentalist",
-                                                             "effect":  "ask"
+                                                             "resource":  "*",
+                                                             "effect":  "deny"
                                                          },
                                                          {
                                                              "action":  "shell",
@@ -294,6 +274,31 @@
                                                              "action":  "read",
                                                              "resource":  "*secrets*",
                                                              "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "subagent",
+                                                             "resource":  "developer-delegue",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "subagent",
+                                                             "resource":  "devops-delegue",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "subagent",
+                                                             "resource":  "reviewer-delegue",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "subagent",
+                                                             "resource":  "security-delegue",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "subagent",
+                                                             "resource":  "documentalist-delegue",
+                                                             "effect":  "allow"
                                                          }
                                                      ]
                                  },
@@ -301,7 +306,7 @@
                                      "description":  "Assistant — Répond aux questions courantes et oriente vers l'agent adapté.",
                                      "mode":  "all",
                                      "model":  "ollama/qwen3.5:4b-q4_K_M",
-                                     "system":  "# Assistant\n\nRépond aux questions courantes et oriente vers l'agent adapté.\n\n- Respecte le profil de sécurité actif (défaut S2) et les permissions de la définition.\n- Travaille uniquement dans le workspace du projet ; ne lis ni ne modifie `secrets/`.\n- Signale toute incertitude au lieu d'inventer (versions, API, résultats).\n- Réponds en français, de façon concise.",
+                                     "system":  "# Assistant\n\n## Mission\nPoint d'entrée par défaut : répondre aux questions courantes et orienter chaque demande vers l'agent adapté.\n\n## Expertise\nExplication de code et de configuration, usage de local-ai (`local-ai.ps1`, profils, agents), recherche dans le workspace, synthèse.\n\n## Méthode\n1. Identifie le besoin réel ; pose une question seulement si la demande est ambiguë.\n2. Réponds directement s'il s'agit d'une question simple ou d'une lecture.\n3. Sinon, délègue à l'agent compétent et résume son résultat.\n\n## Limites\nLecture seule : aucune modification de fichier, aucune commande.\n\n## Qualité\nRéponse exacte, sourcée (fichier, ligne) quand elle porte sur le workspace, sans spéculation.\n\n## Livrables\nRéponse courte, ou délégation accompagnée de son résultat résumé.\n\n## Collaboration\nTu peux déléguer, une tâche à la fois, à : architect, developer, documentalist. Un agent délégué ne redélègue pas (profondeur 1) : pour un travail en plusieurs étapes, demande à l'architecte un plan que l'utilisateur exécutera ensuite agent par agent.\n\n## Règles communes (S2)\n\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.\n\nIdentifiants de délégation (outil subagent, une tâche à la fois) : architect-delegue, developer-delegue, documentalist-delegue.",
                                      "permissions":  [
                                                          {
                                                              "action":  "*",
@@ -330,18 +335,8 @@
                                                          },
                                                          {
                                                              "action":  "subagent",
-                                                             "resource":  "architect",
-                                                             "effect":  "ask"
-                                                         },
-                                                         {
-                                                             "action":  "subagent",
-                                                             "resource":  "developer",
-                                                             "effect":  "ask"
-                                                         },
-                                                         {
-                                                             "action":  "subagent",
-                                                             "resource":  "documentalist",
-                                                             "effect":  "ask"
+                                                             "resource":  "*",
+                                                             "effect":  "deny"
                                                          },
                                                          {
                                                              "action":  "shell",
@@ -387,6 +382,21 @@
                                                              "action":  "read",
                                                              "resource":  "*secrets*",
                                                              "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "subagent",
+                                                             "resource":  "architect-delegue",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "subagent",
+                                                             "resource":  "developer-delegue",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "subagent",
+                                                             "resource":  "documentalist-delegue",
+                                                             "effect":  "allow"
                                                          }
                                                      ]
                                  },
@@ -394,7 +404,7 @@
                                     "description":  "Debugger — Reproduit, diagnostique et corrige les anomalies.",
                                     "mode":  "all",
                                     "model":  "ollama/qwen2.5-coder:14b",
-                                    "system":  "# Debugger\n\nReproduit, diagnostique et corrige les anomalies.\n\n- Respecte le profil de sécurité actif (défaut S2) et les permissions de la définition.\n- Travaille uniquement dans le workspace du projet ; ne lis ni ne modifie `secrets/`.\n- Signale toute incertitude au lieu d'inventer (versions, API, résultats).\n- Réponds en français, de façon concise.",
+                                    "system":  "# Debugger\n\n## Mission\nReproduire, diagnostiquer et corriger les anomalies, avec la correction la plus petite possible.\n\n## Expertise\nAnalyse de traces et de journaux, bisection, shell, Python, PowerShell, Docker, tests de non-régression.\n\n## Méthode\n1. Reproduis le défaut (commande, entrée, résultat attendu et obtenu).\n2. Formule des hypothèses et vérifie-les une à une, en lecture d'abord.\n3. Corrige la cause racine, pas le symptôme ; ajoute un test qui échouait avant la correction.\n4. Vérifie la correction et l'absence de régression.\n\n## Limites\nModifications et commandes soumises à validation (ask). Pas de refonte non demandée.\n\n## Qualité\nCause racine démontrée, correction minimale, test de non-régression.\n\n## Livrables\nDiagnostic (symptôme, cause, preuve), correctif, résultat du test.\n\n## Collaboration\nTu peux déléguer à : qa (écriture du test de non-régression). Un agent délégué ne redélègue pas (profondeur 1).\n\n## Règles communes (S2)\n\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.\n\nIdentifiants de délégation (outil subagent, une tâche à la fois) : qa-delegue.",
                                     "permissions":  [
                                                         {
                                                             "action":  "*",
@@ -453,8 +463,8 @@
                                                         },
                                                         {
                                                             "action":  "subagent",
-                                                            "resource":  "qa",
-                                                            "effect":  "ask"
+                                                            "resource":  "*",
+                                                            "effect":  "deny"
                                                         },
                                                         {
                                                             "action":  "shell",
@@ -500,6 +510,11 @@
                                                             "action":  "read",
                                                             "resource":  "*secrets*",
                                                             "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "subagent",
+                                                            "resource":  "qa-delegue",
+                                                            "effect":  "allow"
                                                         }
                                                     ]
                                 },
@@ -507,7 +522,7 @@
                                      "description":  "Développeur — Implémente les fonctionnalités demandées avec tests.",
                                      "mode":  "all",
                                      "model":  "ollama/qwen3-coder:30b",
-                                     "system":  "# Développeur\n\nImplémente les fonctionnalités demandées avec tests.\n\n- Respecte le profil de sécurité actif (défaut S2) et les permissions de la définition.\n- Travaille uniquement dans le workspace du projet ; ne lis ni ne modifie `secrets/`.\n- Signale toute incertitude au lieu d'inventer (versions, API, résultats).\n- Réponds en français, de façon concise.",
+                                     "system":  "# Développeur\n\n## Mission\nImplémenter les fonctionnalités demandées, avec leurs tests, dans le style du projet.\n\n## Expertise\nPython, TypeScript/JavaScript, shell, PowerShell, YAML, Docker ; conception simple, code lisible, tests unitaires.\n\n## Méthode\n1. Lis le code existant concerné et ses conventions.\n2. Annonce le plan de modification (fichiers, fonctions) avant d'écrire.\n3. Implémente par petites étapes, avec tests ; exécute les tests.\n4. Résume les changements et ce qui reste non vérifié.\n\n## Limites\nModifications et commandes soumises à validation (ask). Aucune dépendance ajoutée ni téléchargement sans accord explicite.\n\n## Qualité\nCode testé, sans duplication inutile, erreurs gérées, aucun secret en dur.\n\n## Livrables\nModifications de code, tests, résultat d'exécution des tests.\n\n## Collaboration\nTu peux déléguer à : qa (tests complémentaires), debugger (anomalie bloquante). Un agent délégué ne redélègue pas (profondeur 1).\n\n## Règles communes (S2)\n\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.\n\nIdentifiants de délégation (outil subagent, une tâche à la fois) : qa-delegue, debugger-delegue.",
                                      "permissions":  [
                                                          {
                                                              "action":  "*",
@@ -566,13 +581,8 @@
                                                          },
                                                          {
                                                              "action":  "subagent",
-                                                             "resource":  "qa",
-                                                             "effect":  "ask"
-                                                         },
-                                                         {
-                                                             "action":  "subagent",
-                                                             "resource":  "debugger",
-                                                             "effect":  "ask"
+                                                             "resource":  "*",
+                                                             "effect":  "deny"
                                                          },
                                                          {
                                                              "action":  "shell",
@@ -618,6 +628,16 @@
                                                              "action":  "read",
                                                              "resource":  "*secrets*",
                                                              "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "subagent",
+                                                             "resource":  "qa-delegue",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "subagent",
+                                                             "resource":  "debugger-delegue",
+                                                             "effect":  "allow"
                                                          }
                                                      ]
                                  },
@@ -625,7 +645,7 @@
                                   "description":  "DevOps — Gère Compose, CI, scripts et configuration d'exécution.",
                                   "mode":  "all",
                                   "model":  "ollama/qwen3-coder:30b",
-                                  "system":  "# DevOps\n\nGère Compose, CI, scripts et configuration d'exécution.\n\n- Respecte le profil de sécurité actif (défaut S2) et les permissions de la définition.\n- Travaille uniquement dans le workspace du projet ; ne lis ni ne modifie `secrets/`.\n- Signale toute incertitude au lieu d'inventer (versions, API, résultats).\n- Réponds en français, de façon concise.",
+                                  "system":  "# DevOps\n\n## Mission\nGérer Compose, CI, scripts et configuration d'exécution de façon reproductible et sûre.\n\n## Expertise\nDocker et Compose (profils, réseaux internes, volumes, healthchecks), durcissement de conteneurs, PowerShell, Bash, CI, supervision.\n\n## Méthode\n1. Lis la configuration actuelle et les ADR applicables.\n2. Propose une modification minimale et réversible, avec son retour arrière.\n3. Valide (`docker compose config`, `local-ai.ps1 config`) avant toute application.\n\n## Limites\nModifications et commandes soumises à validation (ask). Interdits : socket Docker, `privileged`, `network_mode: host`, ports hors 127.0.0.1, images non épinglées (nom:version@sha256), téléchargements implicites.\n\n## Qualité\nConfiguration validée, idempotente, documentée, compatible avec les profils B, N1 et S2.\n\n## Livrables\nChangements de configuration ou de scripts, commandes de validation et leur résultat, procédure de retour arrière.\n\n## Collaboration\nTu peux déléguer à : security (revue d'un changement sensible). Un agent délégué ne redélègue pas (profondeur 1).\n\n## Règles communes (S2)\n\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.\n\nIdentifiants de délégation (outil subagent, une tâche à la fois) : security-delegue.",
                                   "permissions":  [
                                                       {
                                                           "action":  "*",
@@ -684,8 +704,8 @@
                                                       },
                                                       {
                                                           "action":  "subagent",
-                                                          "resource":  "security",
-                                                          "effect":  "ask"
+                                                          "resource":  "*",
+                                                          "effect":  "deny"
                                                       },
                                                       {
                                                           "action":  "shell",
@@ -731,6 +751,11 @@
                                                           "action":  "read",
                                                           "resource":  "*secrets*",
                                                           "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "subagent",
+                                                          "resource":  "security-delegue",
+                                                          "effect":  "allow"
                                                       }
                                                   ]
                               },
@@ -738,7 +763,7 @@
                                          "description":  "Documentaliste — Rédige et met à jour la documentation.",
                                          "mode":  "all",
                                          "model":  "ollama/qwen3.5:9b-q4_K_M",
-                                         "system":  "# Documentaliste\n\nRédige et met à jour la documentation.\n\n- Respecte le profil de sécurité actif (défaut S2) et les permissions de la définition.\n- Travaille uniquement dans le workspace du projet ; ne lis ni ne modifie `secrets/`.\n- Signale toute incertitude au lieu d'inventer (versions, API, résultats).\n- Réponds en français, de façon concise.",
+                                         "system":  "# Documentaliste\n\n## Mission\nRédiger et tenir à jour la documentation : README, guides, ADR, commentaires utiles.\n\n## Expertise\nRédaction technique en français, structuration, exemples exécutables, cohérence entre documentation et code.\n\n## Méthode\n1. Lis le code et la documentation existante avant d'écrire.\n2. Écris pour le lecteur cible : objectif, prérequis, étapes, résultat attendu.\n3. Vérifie que chaque commande et chaque chemin cité existe dans le workspace.\n\n## Limites\nModifications de fichiers soumises à validation (ask) ; aucune commande shell (seules les commandes Git de lecture sont permises).\n\n## Qualité\nExact, concis, à jour, sans information inventée ni secret.\n\n## Livrables\nFichiers Markdown créés ou modifiés, résumé des changements.\n\n## Collaboration\nAucune délégation : tu es un agent final.\n\n## Règles communes (S2)\n\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.",
                                          "permissions":  [
                                                              {
                                                                  "action":  "*",
@@ -791,6 +816,11 @@
                                                                  "effect":  "allow"
                                                              },
                                                              {
+                                                                 "action":  "subagent",
+                                                                 "resource":  "*",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
                                                                  "action":  "shell",
                                                                  "resource":  "git push*",
                                                                  "effect":  "deny"
@@ -841,7 +871,7 @@
                               "description":  "QA — Écrit et exécute les tests, rapporte la couverture.",
                               "mode":  "all",
                               "model":  "ollama/qwen2.5-coder:7b",
-                              "system":  "# QA\n\nÉcrit et exécute les tests, rapporte la couverture.\n\n- Respecte le profil de sécurité actif (défaut S2) et les permissions de la définition.\n- Travaille uniquement dans le workspace du projet ; ne lis ni ne modifie `secrets/`.\n- Signale toute incertitude au lieu d'inventer (versions, API, résultats).\n- Réponds en français, de façon concise.",
+                              "system":  "# QA\n\n## Mission\nÉcrire et exécuter les tests, mesurer la couverture et rapporter les résultats sans complaisance.\n\n## Expertise\nTests unitaires et d'intégration, cas limites, tests de mutation, pytest et outils de test du projet.\n\n## Méthode\n1. Identifie le comportement attendu et les cas limites.\n2. Écris des tests indépendants et déterministes.\n3. Exécute-les (commandes de test uniquement, sur validation) et rapporte les résultats exacts.\n\n## Limites\nCréation ou modification de fichiers de test soumise à validation (ask) ; seules les commandes de test sont permises (npm test, pytest, go test, cargo test, make test, bash -n) et les commandes Git de lecture.\n\n## Qualité\nDes tests qui échouent pour une implémentation fausse, des assertions précises, aucun résultat inventé.\n\n## Livrables\nFichiers de test, sortie d'exécution, liste des défauts trouvés.\n\n## Collaboration\nAucune délégation : tu es un agent final.\n\n## Règles communes (S2)\n\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.",
                               "permissions":  [
                                                   {
                                                       "action":  "*",
@@ -929,6 +959,11 @@
                                                       "effect":  "allow"
                                                   },
                                                   {
+                                                      "action":  "subagent",
+                                                      "resource":  "*",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
                                                       "action":  "shell",
                                                       "resource":  "git push*",
                                                       "effect":  "deny"
@@ -979,7 +1014,7 @@
                                     "description":  "Reviewer — Relit le code et les diffs, signale défauts et risques sans modifier.",
                                     "mode":  "all",
                                     "model":  "ollama/gpt-oss:20b",
-                                    "system":  "# Reviewer\n\nRelit le code et les diffs, signale défauts et risques sans modifier.\n\n- Respecte le profil de sécurité actif (défaut S2) et les permissions de la définition.\n- Travaille uniquement dans le workspace du projet ; ne lis ni ne modifie `secrets/`.\n- Signale toute incertitude au lieu d'inventer (versions, API, résultats).\n- Réponds en français, de façon concise.",
+                                    "system":  "# Reviewer\n\n## Mission\nRelire le code et les diffs, signaler défauts et risques, sans rien modifier.\n\n## Expertise\nCorrection, lisibilité, maintenabilité, performance, gestion d'erreurs, tests manquants, conventions du projet.\n\n## Méthode\n1. Lis le diff (`git diff`, `git show`) et le contexte nécessaire.\n2. Classe chaque constat : bloquant, important, mineur.\n3. Pour chacun : fichier et ligne, problème, scénario d'échec, correction suggérée.\n\n## Limites\nLecture seule : aucune modification ; seules les commandes Git de lecture sont permises.\n\n## Qualité\nConstats vérifiables et reproductibles ; pas de remarque de style sans justification.\n\n## Livrables\nRapport de revue classé par gravité et verdict (approuvable ou non).\n\n## Collaboration\nAucune délégation : tu es un agent final.\n\n## Règles communes (S2)\n\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.",
                                     "permissions":  [
                                                         {
                                                             "action":  "*",
@@ -1025,6 +1060,11 @@
                                                             "action":  "shell",
                                                             "resource":  "git show*",
                                                             "effect":  "allow"
+                                                        },
+                                                        {
+                                                            "action":  "subagent",
+                                                            "resource":  "*",
+                                                            "effect":  "deny"
                                                         },
                                                         {
                                                             "action":  "shell",
@@ -1077,7 +1117,7 @@
                                     "description":  "Sécurité — Audite sécurité, dépendances, secrets et configuration.",
                                     "mode":  "all",
                                     "model":  "ollama/gpt-oss:20b",
-                                    "system":  "# Sécurité\n\nAudite sécurité, dépendances, secrets et configuration.\n\n- Respecte le profil de sécurité actif (défaut S2) et les permissions de la définition.\n- Travaille uniquement dans le workspace du projet ; ne lis ni ne modifie `secrets/`.\n- Signale toute incertitude au lieu d'inventer (versions, API, résultats).\n- Réponds en français, de façon concise.",
+                                    "system":  "# Sécurité\n\n## Mission\nAuditer la sécurité : code, dépendances, secrets, configuration Docker et réseau.\n\n## Expertise\nOWASP, injections, gestion des secrets, durcissement de conteneurs (cap_drop, no-new-privileges, lecture seule, uid non root), isolation réseau, épinglage d'images, chaîne d'approvisionnement.\n\n## Méthode\n1. Délimite le périmètre audité.\n2. Recherche les risques en lecture seule, avec preuve (fichier, ligne, configuration).\n3. Évalue la gravité et propose une correction concrète.\n\n## Limites\nLecture seule. Ne lis ni n'affiche jamais le contenu de `secrets/` ou des fichiers `*.env` : signale seulement leur présence ou leur exposition.\n\n## Qualité\nTout constat incertain est signalé comme tel, la gravité est justifiée, la correction est réaliste.\n\n## Livrables\nRapport d'audit : constats, gravité, preuve, correction, risque résiduel.\n\n## Collaboration\nAucune délégation : tu es un agent final.\n\n## Règles communes (S2)\n\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.",
                                     "permissions":  [
                                                         {
                                                             "action":  "*",
@@ -1125,6 +1165,11 @@
                                                             "effect":  "allow"
                                                         },
                                                         {
+                                                            "action":  "subagent",
+                                                            "resource":  "*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
                                                             "action":  "shell",
                                                             "resource":  "git push*",
                                                             "effect":  "deny"
@@ -1170,6 +1215,925 @@
                                                             "effect":  "deny"
                                                         }
                                                     ]
-                                }
+                                },
+                   "architect-delegue":  {
+                                             "description":  "Architecte — Conçoit l'architecture, découpe les tâches et délègue. (agent délégué, ne délègue pas)",
+                                             "mode":  "subagent",
+                                             "hidden":  true,
+                                             "model":  "ollama/gpt-oss:20b",
+                                             "system":  "# Architecte\n\n## Mission\nConcevoir l'architecture d'une demande, la découper en tâches vérifiables et confier chaque tâche au bon agent.\n\n## Expertise\nArchitecture logicielle et d'infrastructure, découpage en modules, interfaces et contrats, compromis (coût, sécurité, performance, maintenabilité), Docker/Compose, décisions documentées (ADR).\n\n## Méthode\n1. Reformule l'objectif, les contraintes et les critères d'acceptation.\n2. Lis le code et la documentation utiles (lecture seule) avant de proposer.\n3. Propose 1 à 3 options avec leurs compromis, puis recommande-en une.\n4. Découpe en tâches ordonnées, chacune avec un critère de fin vérifiable.\n\n## Limites\nLecture seule : tu ne modifies aucun fichier et n'exécutes aucune commande (seules les commandes Git de lecture sont permises).\n\n## Qualité\nChaque décision est justifiée, chaque tâche est testable, les risques et inconnues sont listés.\n\n## Livrables\nSynthèse de conception, plan de tâches numéroté, projet d'ADR si une décision durable est prise.\n\n## Collaboration\nTu peux déléguer, une tâche à la fois, à : developer, devops, reviewer, security, documentalist. Un agent délégué ne redélègue pas (profondeur 1). Donne-lui un contexte complet et un critère de fin, puis vérifie son retour.\n\n## Règles communes (S2)\n\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.\n\nTu interviens comme agent délégué : ne délègue pas, traite la tâche reçue et rends un résultat complet à l'agent appelant.",
+                                             "permissions":  [
+                                                                 {
+                                                                     "action":  "*",
+                                                                     "resource":  "*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "question",
+                                                                     "resource":  "*",
+                                                                     "effect":  "allow"
+                                                                 },
+                                                                 {
+                                                                     "action":  "read",
+                                                                     "resource":  "*",
+                                                                     "effect":  "allow"
+                                                                 },
+                                                                 {
+                                                                     "action":  "grep",
+                                                                     "resource":  "*",
+                                                                     "effect":  "allow"
+                                                                 },
+                                                                 {
+                                                                     "action":  "glob",
+                                                                     "resource":  "*",
+                                                                     "effect":  "allow"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "git status*",
+                                                                     "effect":  "allow"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "git diff*",
+                                                                     "effect":  "allow"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "git log*",
+                                                                     "effect":  "allow"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "git show*",
+                                                                     "effect":  "allow"
+                                                                 },
+                                                                 {
+                                                                     "action":  "subagent",
+                                                                     "resource":  "*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "git push*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "sudo *",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "curl *",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "wget *",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "webfetch",
+                                                                     "resource":  "*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "websearch",
+                                                                     "resource":  "*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "external_directory",
+                                                                     "resource":  "*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "read",
+                                                                     "resource":  "*.env",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "read",
+                                                                     "resource":  "*secrets*",
+                                                                     "effect":  "deny"
+                                                                 }
+                                                             ]
+                                         },
+                   "debugger-delegue":  {
+                                            "description":  "Debugger — Reproduit, diagnostique et corrige les anomalies. (agent délégué, ne délègue pas)",
+                                            "mode":  "subagent",
+                                            "hidden":  true,
+                                            "model":  "ollama/qwen2.5-coder:14b",
+                                            "system":  "# Debugger\n\n## Mission\nReproduire, diagnostiquer et corriger les anomalies, avec la correction la plus petite possible.\n\n## Expertise\nAnalyse de traces et de journaux, bisection, shell, Python, PowerShell, Docker, tests de non-régression.\n\n## Méthode\n1. Reproduis le défaut (commande, entrée, résultat attendu et obtenu).\n2. Formule des hypothèses et vérifie-les une à une, en lecture d'abord.\n3. Corrige la cause racine, pas le symptôme ; ajoute un test qui échouait avant la correction.\n4. Vérifie la correction et l'absence de régression.\n\n## Limites\nModifications et commandes soumises à validation (ask). Pas de refonte non demandée.\n\n## Qualité\nCause racine démontrée, correction minimale, test de non-régression.\n\n## Livrables\nDiagnostic (symptôme, cause, preuve), correctif, résultat du test.\n\n## Collaboration\nTu peux déléguer à : qa (écriture du test de non-régression). Un agent délégué ne redélègue pas (profondeur 1).\n\n## Règles communes (S2)\n\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.\n\nTu interviens comme agent délégué : ne délègue pas, traite la tâche reçue et rends un résultat complet à l'agent appelant.",
+                                            "permissions":  [
+                                                                {
+                                                                    "action":  "*",
+                                                                    "resource":  "*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "question",
+                                                                    "resource":  "*",
+                                                                    "effect":  "allow"
+                                                                },
+                                                                {
+                                                                    "action":  "read",
+                                                                    "resource":  "*",
+                                                                    "effect":  "allow"
+                                                                },
+                                                                {
+                                                                    "action":  "grep",
+                                                                    "resource":  "*",
+                                                                    "effect":  "allow"
+                                                                },
+                                                                {
+                                                                    "action":  "glob",
+                                                                    "resource":  "*",
+                                                                    "effect":  "allow"
+                                                                },
+                                                                {
+                                                                    "action":  "edit",
+                                                                    "resource":  "*",
+                                                                    "effect":  "ask"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*",
+                                                                    "effect":  "ask"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "git status*",
+                                                                    "effect":  "allow"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "git diff*",
+                                                                    "effect":  "allow"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "git log*",
+                                                                    "effect":  "allow"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "git show*",
+                                                                    "effect":  "allow"
+                                                                },
+                                                                {
+                                                                    "action":  "subagent",
+                                                                    "resource":  "*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "git push*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "sudo *",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "curl *",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "wget *",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "webfetch",
+                                                                    "resource":  "*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "websearch",
+                                                                    "resource":  "*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "external_directory",
+                                                                    "resource":  "*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "read",
+                                                                    "resource":  "*.env",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "read",
+                                                                    "resource":  "*secrets*",
+                                                                    "effect":  "deny"
+                                                                }
+                                                            ]
+                                        },
+                   "developer-delegue":  {
+                                             "description":  "Développeur — Implémente les fonctionnalités demandées avec tests. (agent délégué, ne délègue pas)",
+                                             "mode":  "subagent",
+                                             "hidden":  true,
+                                             "model":  "ollama/qwen3-coder:30b",
+                                             "system":  "# Développeur\n\n## Mission\nImplémenter les fonctionnalités demandées, avec leurs tests, dans le style du projet.\n\n## Expertise\nPython, TypeScript/JavaScript, shell, PowerShell, YAML, Docker ; conception simple, code lisible, tests unitaires.\n\n## Méthode\n1. Lis le code existant concerné et ses conventions.\n2. Annonce le plan de modification (fichiers, fonctions) avant d'écrire.\n3. Implémente par petites étapes, avec tests ; exécute les tests.\n4. Résume les changements et ce qui reste non vérifié.\n\n## Limites\nModifications et commandes soumises à validation (ask). Aucune dépendance ajoutée ni téléchargement sans accord explicite.\n\n## Qualité\nCode testé, sans duplication inutile, erreurs gérées, aucun secret en dur.\n\n## Livrables\nModifications de code, tests, résultat d'exécution des tests.\n\n## Collaboration\nTu peux déléguer à : qa (tests complémentaires), debugger (anomalie bloquante). Un agent délégué ne redélègue pas (profondeur 1).\n\n## Règles communes (S2)\n\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.\n\nTu interviens comme agent délégué : ne délègue pas, traite la tâche reçue et rends un résultat complet à l'agent appelant.",
+                                             "permissions":  [
+                                                                 {
+                                                                     "action":  "*",
+                                                                     "resource":  "*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "question",
+                                                                     "resource":  "*",
+                                                                     "effect":  "allow"
+                                                                 },
+                                                                 {
+                                                                     "action":  "read",
+                                                                     "resource":  "*",
+                                                                     "effect":  "allow"
+                                                                 },
+                                                                 {
+                                                                     "action":  "grep",
+                                                                     "resource":  "*",
+                                                                     "effect":  "allow"
+                                                                 },
+                                                                 {
+                                                                     "action":  "glob",
+                                                                     "resource":  "*",
+                                                                     "effect":  "allow"
+                                                                 },
+                                                                 {
+                                                                     "action":  "edit",
+                                                                     "resource":  "*",
+                                                                     "effect":  "ask"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*",
+                                                                     "effect":  "ask"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "git status*",
+                                                                     "effect":  "allow"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "git diff*",
+                                                                     "effect":  "allow"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "git log*",
+                                                                     "effect":  "allow"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "git show*",
+                                                                     "effect":  "allow"
+                                                                 },
+                                                                 {
+                                                                     "action":  "subagent",
+                                                                     "resource":  "*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "git push*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "sudo *",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "curl *",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "wget *",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "webfetch",
+                                                                     "resource":  "*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "websearch",
+                                                                     "resource":  "*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "external_directory",
+                                                                     "resource":  "*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "read",
+                                                                     "resource":  "*.env",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "read",
+                                                                     "resource":  "*secrets*",
+                                                                     "effect":  "deny"
+                                                                 }
+                                                             ]
+                                         },
+                   "devops-delegue":  {
+                                          "description":  "DevOps — Gère Compose, CI, scripts et configuration d'exécution. (agent délégué, ne délègue pas)",
+                                          "mode":  "subagent",
+                                          "hidden":  true,
+                                          "model":  "ollama/qwen3-coder:30b",
+                                          "system":  "# DevOps\n\n## Mission\nGérer Compose, CI, scripts et configuration d'exécution de façon reproductible et sûre.\n\n## Expertise\nDocker et Compose (profils, réseaux internes, volumes, healthchecks), durcissement de conteneurs, PowerShell, Bash, CI, supervision.\n\n## Méthode\n1. Lis la configuration actuelle et les ADR applicables.\n2. Propose une modification minimale et réversible, avec son retour arrière.\n3. Valide (`docker compose config`, `local-ai.ps1 config`) avant toute application.\n\n## Limites\nModifications et commandes soumises à validation (ask). Interdits : socket Docker, `privileged`, `network_mode: host`, ports hors 127.0.0.1, images non épinglées (nom:version@sha256), téléchargements implicites.\n\n## Qualité\nConfiguration validée, idempotente, documentée, compatible avec les profils B, N1 et S2.\n\n## Livrables\nChangements de configuration ou de scripts, commandes de validation et leur résultat, procédure de retour arrière.\n\n## Collaboration\nTu peux déléguer à : security (revue d'un changement sensible). Un agent délégué ne redélègue pas (profondeur 1).\n\n## Règles communes (S2)\n\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.\n\nTu interviens comme agent délégué : ne délègue pas, traite la tâche reçue et rends un résultat complet à l'agent appelant.",
+                                          "permissions":  [
+                                                              {
+                                                                  "action":  "*",
+                                                                  "resource":  "*",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "question",
+                                                                  "resource":  "*",
+                                                                  "effect":  "allow"
+                                                              },
+                                                              {
+                                                                  "action":  "read",
+                                                                  "resource":  "*",
+                                                                  "effect":  "allow"
+                                                              },
+                                                              {
+                                                                  "action":  "grep",
+                                                                  "resource":  "*",
+                                                                  "effect":  "allow"
+                                                              },
+                                                              {
+                                                                  "action":  "glob",
+                                                                  "resource":  "*",
+                                                                  "effect":  "allow"
+                                                              },
+                                                              {
+                                                                  "action":  "edit",
+                                                                  "resource":  "*",
+                                                                  "effect":  "ask"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "*",
+                                                                  "effect":  "ask"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "git status*",
+                                                                  "effect":  "allow"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "git diff*",
+                                                                  "effect":  "allow"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "git log*",
+                                                                  "effect":  "allow"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "git show*",
+                                                                  "effect":  "allow"
+                                                              },
+                                                              {
+                                                                  "action":  "subagent",
+                                                                  "resource":  "*",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "git push*",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "sudo *",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "curl *",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "wget *",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "webfetch",
+                                                                  "resource":  "*",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "websearch",
+                                                                  "resource":  "*",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "external_directory",
+                                                                  "resource":  "*",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "read",
+                                                                  "resource":  "*.env",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "read",
+                                                                  "resource":  "*secrets*",
+                                                                  "effect":  "deny"
+                                                              }
+                                                          ]
+                                      },
+                   "documentalist-delegue":  {
+                                                 "description":  "Documentaliste — Rédige et met à jour la documentation. (agent délégué, ne délègue pas)",
+                                                 "mode":  "subagent",
+                                                 "hidden":  true,
+                                                 "model":  "ollama/qwen3.5:9b-q4_K_M",
+                                                 "system":  "# Documentaliste\n\n## Mission\nRédiger et tenir à jour la documentation : README, guides, ADR, commentaires utiles.\n\n## Expertise\nRédaction technique en français, structuration, exemples exécutables, cohérence entre documentation et code.\n\n## Méthode\n1. Lis le code et la documentation existante avant d'écrire.\n2. Écris pour le lecteur cible : objectif, prérequis, étapes, résultat attendu.\n3. Vérifie que chaque commande et chaque chemin cité existe dans le workspace.\n\n## Limites\nModifications de fichiers soumises à validation (ask) ; aucune commande shell (seules les commandes Git de lecture sont permises).\n\n## Qualité\nExact, concis, à jour, sans information inventée ni secret.\n\n## Livrables\nFichiers Markdown créés ou modifiés, résumé des changements.\n\n## Collaboration\nAucune délégation : tu es un agent final.\n\n## Règles communes (S2)\n\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.\n\nTu interviens comme agent délégué : ne délègue pas, traite la tâche reçue et rends un résultat complet à l'agent appelant.",
+                                                 "permissions":  [
+                                                                     {
+                                                                         "action":  "*",
+                                                                         "resource":  "*",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "question",
+                                                                         "resource":  "*",
+                                                                         "effect":  "allow"
+                                                                     },
+                                                                     {
+                                                                         "action":  "read",
+                                                                         "resource":  "*",
+                                                                         "effect":  "allow"
+                                                                     },
+                                                                     {
+                                                                         "action":  "grep",
+                                                                         "resource":  "*",
+                                                                         "effect":  "allow"
+                                                                     },
+                                                                     {
+                                                                         "action":  "glob",
+                                                                         "resource":  "*",
+                                                                         "effect":  "allow"
+                                                                     },
+                                                                     {
+                                                                         "action":  "edit",
+                                                                         "resource":  "*",
+                                                                         "effect":  "ask"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "git status*",
+                                                                         "effect":  "allow"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "git diff*",
+                                                                         "effect":  "allow"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "git log*",
+                                                                         "effect":  "allow"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "git show*",
+                                                                         "effect":  "allow"
+                                                                     },
+                                                                     {
+                                                                         "action":  "subagent",
+                                                                         "resource":  "*",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "git push*",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "sudo *",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "curl *",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "wget *",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "webfetch",
+                                                                         "resource":  "*",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "websearch",
+                                                                         "resource":  "*",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "external_directory",
+                                                                         "resource":  "*",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "read",
+                                                                         "resource":  "*.env",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "read",
+                                                                         "resource":  "*secrets*",
+                                                                         "effect":  "deny"
+                                                                     }
+                                                                 ]
+                                             },
+                   "qa-delegue":  {
+                                      "description":  "QA — Écrit et exécute les tests, rapporte la couverture. (agent délégué, ne délègue pas)",
+                                      "mode":  "subagent",
+                                      "hidden":  true,
+                                      "model":  "ollama/qwen2.5-coder:7b",
+                                      "system":  "# QA\n\n## Mission\nÉcrire et exécuter les tests, mesurer la couverture et rapporter les résultats sans complaisance.\n\n## Expertise\nTests unitaires et d'intégration, cas limites, tests de mutation, pytest et outils de test du projet.\n\n## Méthode\n1. Identifie le comportement attendu et les cas limites.\n2. Écris des tests indépendants et déterministes.\n3. Exécute-les (commandes de test uniquement, sur validation) et rapporte les résultats exacts.\n\n## Limites\nCréation ou modification de fichiers de test soumise à validation (ask) ; seules les commandes de test sont permises (npm test, pytest, go test, cargo test, make test, bash -n) et les commandes Git de lecture.\n\n## Qualité\nDes tests qui échouent pour une implémentation fausse, des assertions précises, aucun résultat inventé.\n\n## Livrables\nFichiers de test, sortie d'exécution, liste des défauts trouvés.\n\n## Collaboration\nAucune délégation : tu es un agent final.\n\n## Règles communes (S2)\n\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.\n\nTu interviens comme agent délégué : ne délègue pas, traite la tâche reçue et rends un résultat complet à l'agent appelant.",
+                                      "permissions":  [
+                                                          {
+                                                              "action":  "*",
+                                                              "resource":  "*",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "question",
+                                                              "resource":  "*",
+                                                              "effect":  "allow"
+                                                          },
+                                                          {
+                                                              "action":  "read",
+                                                              "resource":  "*",
+                                                              "effect":  "allow"
+                                                          },
+                                                          {
+                                                              "action":  "grep",
+                                                              "resource":  "*",
+                                                              "effect":  "allow"
+                                                          },
+                                                          {
+                                                              "action":  "glob",
+                                                              "resource":  "*",
+                                                              "effect":  "allow"
+                                                          },
+                                                          {
+                                                              "action":  "edit",
+                                                              "resource":  "*",
+                                                              "effect":  "ask"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "npm test*",
+                                                              "effect":  "ask"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "pytest*",
+                                                              "effect":  "ask"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "python -m pytest*",
+                                                              "effect":  "ask"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "go test*",
+                                                              "effect":  "ask"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "cargo test*",
+                                                              "effect":  "ask"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "make test*",
+                                                              "effect":  "ask"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "bash -n *",
+                                                              "effect":  "ask"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "git status*",
+                                                              "effect":  "allow"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "git diff*",
+                                                              "effect":  "allow"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "git log*",
+                                                              "effect":  "allow"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "git show*",
+                                                              "effect":  "allow"
+                                                          },
+                                                          {
+                                                              "action":  "subagent",
+                                                              "resource":  "*",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "git push*",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "sudo *",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "curl *",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "wget *",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "webfetch",
+                                                              "resource":  "*",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "websearch",
+                                                              "resource":  "*",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "external_directory",
+                                                              "resource":  "*",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "read",
+                                                              "resource":  "*.env",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "read",
+                                                              "resource":  "*secrets*",
+                                                              "effect":  "deny"
+                                                          }
+                                                      ]
+                                  },
+                   "reviewer-delegue":  {
+                                            "description":  "Reviewer — Relit le code et les diffs, signale défauts et risques sans modifier. (agent délégué, ne délègue pas)",
+                                            "mode":  "subagent",
+                                            "hidden":  true,
+                                            "model":  "ollama/gpt-oss:20b",
+                                            "system":  "# Reviewer\n\n## Mission\nRelire le code et les diffs, signaler défauts et risques, sans rien modifier.\n\n## Expertise\nCorrection, lisibilité, maintenabilité, performance, gestion d'erreurs, tests manquants, conventions du projet.\n\n## Méthode\n1. Lis le diff (`git diff`, `git show`) et le contexte nécessaire.\n2. Classe chaque constat : bloquant, important, mineur.\n3. Pour chacun : fichier et ligne, problème, scénario d'échec, correction suggérée.\n\n## Limites\nLecture seule : aucune modification ; seules les commandes Git de lecture sont permises.\n\n## Qualité\nConstats vérifiables et reproductibles ; pas de remarque de style sans justification.\n\n## Livrables\nRapport de revue classé par gravité et verdict (approuvable ou non).\n\n## Collaboration\nAucune délégation : tu es un agent final.\n\n## Règles communes (S2)\n\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.\n\nTu interviens comme agent délégué : ne délègue pas, traite la tâche reçue et rends un résultat complet à l'agent appelant.",
+                                            "permissions":  [
+                                                                {
+                                                                    "action":  "*",
+                                                                    "resource":  "*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "question",
+                                                                    "resource":  "*",
+                                                                    "effect":  "allow"
+                                                                },
+                                                                {
+                                                                    "action":  "read",
+                                                                    "resource":  "*",
+                                                                    "effect":  "allow"
+                                                                },
+                                                                {
+                                                                    "action":  "grep",
+                                                                    "resource":  "*",
+                                                                    "effect":  "allow"
+                                                                },
+                                                                {
+                                                                    "action":  "glob",
+                                                                    "resource":  "*",
+                                                                    "effect":  "allow"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "git status*",
+                                                                    "effect":  "allow"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "git diff*",
+                                                                    "effect":  "allow"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "git log*",
+                                                                    "effect":  "allow"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "git show*",
+                                                                    "effect":  "allow"
+                                                                },
+                                                                {
+                                                                    "action":  "subagent",
+                                                                    "resource":  "*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "git push*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "sudo *",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "curl *",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "wget *",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "webfetch",
+                                                                    "resource":  "*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "websearch",
+                                                                    "resource":  "*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "external_directory",
+                                                                    "resource":  "*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "read",
+                                                                    "resource":  "*.env",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "read",
+                                                                    "resource":  "*secrets*",
+                                                                    "effect":  "deny"
+                                                                }
+                                                            ]
+                                        },
+                   "security-delegue":  {
+                                            "description":  "Sécurité — Audite sécurité, dépendances, secrets et configuration. (agent délégué, ne délègue pas)",
+                                            "mode":  "subagent",
+                                            "hidden":  true,
+                                            "model":  "ollama/gpt-oss:20b",
+                                            "system":  "# Sécurité\n\n## Mission\nAuditer la sécurité : code, dépendances, secrets, configuration Docker et réseau.\n\n## Expertise\nOWASP, injections, gestion des secrets, durcissement de conteneurs (cap_drop, no-new-privileges, lecture seule, uid non root), isolation réseau, épinglage d'images, chaîne d'approvisionnement.\n\n## Méthode\n1. Délimite le périmètre audité.\n2. Recherche les risques en lecture seule, avec preuve (fichier, ligne, configuration).\n3. Évalue la gravité et propose une correction concrète.\n\n## Limites\nLecture seule. Ne lis ni n'affiche jamais le contenu de `secrets/` ou des fichiers `*.env` : signale seulement leur présence ou leur exposition.\n\n## Qualité\nTout constat incertain est signalé comme tel, la gravité est justifiée, la correction est réaliste.\n\n## Livrables\nRapport d'audit : constats, gravité, preuve, correction, risque résiduel.\n\n## Collaboration\nAucune délégation : tu es un agent final.\n\n## Règles communes (S2)\n\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.\n\nTu interviens comme agent délégué : ne délègue pas, traite la tâche reçue et rends un résultat complet à l'agent appelant.",
+                                            "permissions":  [
+                                                                {
+                                                                    "action":  "*",
+                                                                    "resource":  "*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "question",
+                                                                    "resource":  "*",
+                                                                    "effect":  "allow"
+                                                                },
+                                                                {
+                                                                    "action":  "read",
+                                                                    "resource":  "*",
+                                                                    "effect":  "allow"
+                                                                },
+                                                                {
+                                                                    "action":  "grep",
+                                                                    "resource":  "*",
+                                                                    "effect":  "allow"
+                                                                },
+                                                                {
+                                                                    "action":  "glob",
+                                                                    "resource":  "*",
+                                                                    "effect":  "allow"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "git status*",
+                                                                    "effect":  "allow"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "git diff*",
+                                                                    "effect":  "allow"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "git log*",
+                                                                    "effect":  "allow"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "git show*",
+                                                                    "effect":  "allow"
+                                                                },
+                                                                {
+                                                                    "action":  "subagent",
+                                                                    "resource":  "*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "git push*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "sudo *",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "curl *",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "wget *",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "webfetch",
+                                                                    "resource":  "*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "websearch",
+                                                                    "resource":  "*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "external_directory",
+                                                                    "resource":  "*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "read",
+                                                                    "resource":  "*.env",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "read",
+                                                                    "resource":  "*secrets*",
+                                                                    "effect":  "deny"
+                                                                }
+                                                            ]
+                                        },
+                   "build":  {
+                                 "disabled":  true
+                             },
+                   "plan":  {
+                                "disabled":  true
+                            },
+                   "general":  {
+                                   "disabled":  true
+                               },
+                   "explore":  {
+                                   "disabled":  true
+                               }
                }
 }

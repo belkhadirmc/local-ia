@@ -405,6 +405,7 @@ function Invoke-OpenCodeReload {
     $j = Get-Content (Join-Path $Root 'config\opencode\opencode.json') -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($AgentId -and $env:LOCAL_AI_TEST_FAIL_RELOAD -eq '1') { throw 'échec simulé (LOCAL_AI_TEST_FAIL_RELOAD=1, test du rollback)' }
     if ($AgentId -and $Tag -and $j.agents.$AgentId.model -ne "ollama/$Tag") { throw "opencode.json : agent $AgentId -> $($j.agents.$AgentId.model) (attendu ollama/$Tag)" }
+    $sv = $j.agents.PSObject.Properties["$AgentId-delegue"]; if ($AgentId -and $Tag -and $sv -and $sv.Value.model -ne "ollama/$Tag") { throw "opencode.json : variante $AgentId-delegue -> $($sv.Value.model) (attendu ollama/$Tag)" }
     $id = (Invoke-Native docker @('compose', '-f', (Join-Path $Root 'compose.yaml'), '--profile', 'ollama', '--profile', 'opencode', 'ps', '-q', '--status', 'running', 'opencode')).Output.Trim()
     if (-not $id) { return 'OpenCode arrêté : configuration appliquée au prochain démarrage' }
     $r = Invoke-Native docker @('restart', $id); if ($r.Code -ne 0) { throw "redémarrage OpenCode : $($r.Output)" }
@@ -412,8 +413,15 @@ function Invoke-OpenCodeReload {
     do { Start-Sleep 3; $h = (Invoke-Native docker @('inspect', $id, '--format', '{{.State.Health.Status}}')).Output.Trim() } while ($h -ne 'healthy' -and (Get-Date) -lt $deadline)
     if ($h -ne 'healthy') { throw "OpenCode non sain après redémarrage ($h)" }
     if ($AgentId -and $Tag) {
-        $a = (Invoke-Native docker @('exec', $id, 'opencode', 'api', '--server', 'http://127.0.0.1:4096', 'GET', "/api/agent/$AgentId")).Output
-        if ($a -notmatch ('"model":\{"id":"' + [regex]::Escape($Tag) + '","providerID":"ollama"')) { throw "serveur OpenCode : agent $AgentId sans le modèle $Tag" }
+        # Le serveur charge la configuration peu après le redémarrage : vérification répétée (30 s max), agent et variante déléguée.
+        foreach ($ag in @($AgentId) + @(if ($sv) { "$AgentId-delegue" })) {
+            $ok = $false
+            for ($i = 0; $i -lt 10 -and -not $ok; $i++) {
+                $a = (Invoke-Native docker @('exec', $id, 'opencode', 'api', '--server', 'http://127.0.0.1:4096', 'GET', "/api/agent/$ag")).Output
+                $ok = $a -match ('"model":\{"id":"' + [regex]::Escape($Tag) + '","providerID":"ollama"'); if (-not $ok) { Start-Sleep 3 }
+            }
+            if (-not $ok) { throw "serveur OpenCode : agent $ag sans le modèle $Tag" }
+        }
     }
     'OpenCode redémarré (sain), agent vérifié via l''API'
 }

@@ -36,7 +36,8 @@ foreach ($b in ([regex]::Split($reg, '(?m)^\s*-\s+id:\s*') | Select-Object -Skip
 }
 
 # --- agents (Continue exclu : autocomplétion hors OpenCode)
-$agents = [ordered]@{}
+$agents = [ordered]@{}; $delegMap = [ordered]@{}; $subs = [ordered]@{}; $DelegSuffix = '-delegue'
+$Common = [IO.File]::ReadAllText((Join-Path $Root 'agents\prompts\_common.md'), $Utf8).Trim()
 foreach ($f in (Get-ChildItem (Join-Path $Root 'agents\definitions') -Filter *.yaml | Sort-Object Name)) {
     $t = [IO.File]::ReadAllText($f.FullName, $Utf8)
     if ((Get-Val $t 'type') -eq 'continue-autocomplete') { continue }
@@ -45,9 +46,12 @@ foreach ($f in (Get-ChildItem (Join-Path $Root 'agents\definitions') -Filter *.y
     $perm = @{}
     $permBlock = [regex]::Match($t, '(?ms)^permissions:\s*\r?\n((?:\s+[^\r\n]+\r?\n)+)').Groups[1].Value
     foreach ($k in 'read', 'edit', 'bash', 'network', 'mcp') { $perm[$k] = Get-Val $permBlock $k }
-    $tools = Get-List $t 'tools'
-    $deleg = Get-List $t 'can_delegate_to'
-    $prompt = [IO.File]::ReadAllText((Join-Path $f.DirectoryName (Get-Val $t 'instructions')), $Utf8).Trim()
+    $tools = @(Get-List $t 'tools')
+    $deleg = @(Get-List $t 'can_delegate_to')
+    $prompt = [IO.File]::ReadAllText((Join-Path $f.DirectoryName (Get-Val $t 'instructions')), $Utf8).Trim() + "`n`n" + $Common
+    $depth = Get-Val $t 'max_depth'
+    if ($deleg.Count -and $depth -ne '1') { throw "Agent $id : max_depth doit valoir 1 (trouvé '$depth')." }
+    $delegMap[$id] = $deleg
     $rules = New-Object System.Collections.Generic.List[object]
     $rules.Add((Rule '*' '*' 'deny')); $rules.Add((Rule 'question' '*' 'allow'))
     foreach ($tl in 'read', 'grep', 'glob') { if ($tools -contains $tl) { $rules.Add((Rule $tl '*' $(if ($perm.read -eq 'allow') { 'allow' } else { 'ask' }))) } }
@@ -55,18 +59,37 @@ foreach ($f in (Get-ChildItem (Join-Path $Root 'agents\definitions') -Filter *.y
     if ($tools -contains 'bash' -and $perm.bash -ne 'deny') { $rules.Add((Rule 'shell' '*' 'ask')) }
     elseif ($tools -contains 'test') { foreach ($p in 'npm test*', 'pytest*', 'python -m pytest*', 'go test*', 'cargo test*', 'make test*', 'bash -n *') { $rules.Add((Rule 'shell' $p 'ask')) } }
     if ($tools -contains 'git-read') { foreach ($p in 'git status*', 'git diff*', 'git log*', 'git show*') { $rules.Add((Rule 'shell' $p 'allow')) } }
-    foreach ($d in $deleg) { $rules.Add((Rule 'subagent' $d 'ask')) }
+    # Délégations : refus par défaut ; seules les variantes « <cible>-delegue » déclarées sont autorisées (S2 : delegation allow).
+    $rules.Add((Rule 'subagent' '*' 'deny'))
     foreach ($p in 'git push*', 'sudo *', 'curl *', 'wget *') { $rules.Add((Rule 'shell' $p 'deny')) }
     foreach ($a in 'webfetch', 'websearch', 'external_directory') { $rules.Add((Rule $a '*' 'deny')) }
     $rules.Add((Rule 'read' '*.env' 'deny')); $rules.Add((Rule 'read' '*secrets*' 'deny'))
-    $agents[$id] = [ordered]@{
-        description = "$(Get-Val $t 'name') — $(Get-Val $t 'role')"
-        mode        = 'all'
-        model       = "ollama/$($idToTag[$ref])"
-        system      = $prompt
-        permissions = $rules.ToArray()
+    $base = $rules.ToArray()
+    foreach ($d in $deleg) { $rules.Add((Rule 'subagent' "$d$DelegSuffix" 'allow')) }
+    $label = "$(Get-Val $t 'name') — $(Get-Val $t 'role')"
+    $sys = $prompt
+    if ($deleg.Count) { $sys += "`n`nIdentifiants de délégation (outil subagent, une tâche à la fois) : " + (($deleg | ForEach-Object { "$_$DelegSuffix" }) -join ', ') + '.' }
+    $agents[$id] = [ordered]@{ description = $label; mode = 'all'; model = "ollama/$($idToTag[$ref])"; system = $sys; permissions = $rules.ToArray() }
+    # Variante déléguée (profondeur 1 imposée : aucune délégation possible), cachée, même modèle et mêmes permissions de base.
+    $subs[$id] = [ordered]@{ description = "$label (agent délégué, ne délègue pas)"; mode = 'subagent'; hidden = $true; model = "ollama/$($idToTag[$ref])"
+        system = $prompt + "`n`nTu interviens comme agent délégué : ne délègue pas, traite la tâche reçue et rends un résultat complet à l'agent appelant."; permissions = $base }
+}
+# Seules les cibles réellement déclarées reçoivent une variante déléguée.
+foreach ($dst in (@($delegMap.Values | ForEach-Object { $_ }) | Sort-Object -Unique)) { if ($subs.Contains($dst)) { $agents["$dst$DelegSuffix"] = $subs[$dst] } }
+
+# --- contrôle des délégations : cibles existantes (OpenCode), pas d'auto-délégation, pas de cycle
+foreach ($src in $delegMap.Keys) {
+    foreach ($dst in $delegMap[$src]) {
+        if ($dst -eq $src) { throw "Délégation : $src se délègue à lui-même." }
+        if (-not $agents.Contains($dst)) { throw "Délégation : $src -> $dst (agent inconnu ou hors OpenCode)." }
     }
 }
+function Test-Cycle([string]$Node, [string[]]$Path) {
+    foreach ($n in @($delegMap[$Node])) { if ($Path -contains $n) { throw "Délégation : cycle $(($Path + $n) -join ' -> ')" }; Test-Cycle $n ($Path + $n) }
+}
+foreach ($src in $delegMap.Keys) { Test-Cycle $src @($src) }
+# Agents intégrés d'OpenCode à usage général désactivés : seuls les 9 agents local-ai sont sélectionnables ou délégables.
+foreach ($b in 'build', 'plan', 'general', 'explore') { $agents[$b] = [ordered]@{ disabled = $true } }
 
 $cfg = [ordered]@{
     '$schema'     = 'https://opencode.ai/config.json'
@@ -101,4 +124,4 @@ if ($Check) {
     Write-Output 'opencode.json : à jour'; exit 0
 }
 [IO.File]::WriteAllText($Out, $json, $Utf8)
-Write-Output ("opencode.json : {0} modèles, {1} agents" -f $models.Count, $agents.Count)
+Write-Output ("opencode.json : {0} modèles, {1} agents local-ai, {2} variantes déléguées, 4 intégrés désactivés" -f $models.Count, $delegMap.Count, ($agents.Count - $delegMap.Count - 4))
