@@ -1,29 +1,22 @@
-# Profil de performance C — état SOUHAITÉ (non appliqué automatiquement).
-schema: local-ai/profile/performance/v1
+# Profil de performance C — Maximal. Appliqué par .\local-ai.ps1 profile apply C --confirm (BK1, vérification, rollback).
+schema: local-ai/profile/performance/v2
 id: C
+label: "Maximal"
+status: defined
 wsl2:
   memory: 32GB
-  processors: 12
+  processors: 16
   swap: 8GB
   autoMemoryReclaim: gradual
 ollama:
   OLLAMA_CONTEXT_LENGTH: 16384
+  OLLAMA_KEEP_ALIVE: 5m
+  OLLAMA_KV_CACHE_TYPE: q8_0
   OLLAMA_NUM_PARALLEL: 1
   OLLAMA_MAX_LOADED_MODELS: 1
+  num_thread: auto
 limits:
   concurrent_inferences: 1
   loaded_models: 1
-wslconfig_preview: |-
-  [wsl2]
-  memory=32GB
-  processors=12
-  swap=8GB
-
-  [experimental]
-  autoMemoryReclaim=gradual
-apply:
-  automatic: false
-  requires:
-    - "arrêt Docker Desktop"
-    - "wsl --shutdown"
-    - "sauvegarde BK1"
+  max_model_gib: 20
+note: "RISQUE : laisse ~6 Gio à Windows (37,9 Gio physiques) sous le seuil de 4 Gio libres pendant les gros modèles. Non mesuré ; OpenCode reste limité à 8192."

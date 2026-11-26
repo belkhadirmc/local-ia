@@ -1,29 +1,22 @@
-# Profil de performance B — état SOUHAITÉ (non appliqué automatiquement).
-schema: local-ai/profile/performance/v1
+# Profil de performance B — Équilibré (défaut). Appliqué par .\local-ai.ps1 profile apply B --confirm (BK1, vérification, rollback).
+schema: local-ai/profile/performance/v2
 id: B
+label: "Équilibré (défaut)"
+status: validated
 wsl2:
   memory: 24GB
-  processors: 8
+  processors: 16
   swap: 8GB
   autoMemoryReclaim: gradual
 ollama:
   OLLAMA_CONTEXT_LENGTH: 8192
+  OLLAMA_KEEP_ALIVE: 5m
+  OLLAMA_KV_CACHE_TYPE: q8_0
   OLLAMA_NUM_PARALLEL: 1
   OLLAMA_MAX_LOADED_MODELS: 1
+  num_thread: auto
 limits:
   concurrent_inferences: 1
   loaded_models: 1
-wslconfig_preview: |-
-  [wsl2]
-  memory=24GB
-  processors=8
-  swap=8GB
-
-  [experimental]
-  autoMemoryReclaim=gradual
-apply:
-  automatic: false
-  requires:
-    - "arrêt Docker Desktop"
-    - "wsl --shutdown"
-    - "sauvegarde BK1"
+  max_model_gib: 20
+note: "Validé 12.B.1 : 16 vCPU -> Ollama auto = 8 threads (optimum mesuré), KV q8_0, Flash Attention auto. Les 7 modèles."

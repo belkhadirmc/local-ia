@@ -1,4 +1,4 @@
-# Politiques de supervision VALIDÉES. Supervision non implémentée (local-ai.ps1 monitor).
+# Politiques de supervision VALIDÉES (ADR-0001), appliquées par local-ai.ps1 monitor status|watch (12.B.1, scripts/monitor/monitor.ps1).
 schema: local-ai/monitoring/v1
 disk_ssd_free_gib:
   warning: 45

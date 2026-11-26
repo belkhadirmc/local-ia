@@ -1,7 +1,7 @@
 ﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
-  Administration de local-ai. Implémenté : help, status, config, start/stop (ollama, opencode), model, tui, mcp.
+  Administration de local-ai. Implémenté : help, status, config, start/stop, model, tui, mcp, agent, permissions, emergency-stop, continue, project, profile, monitor.
 .EXAMPLE
   .\local-ai.ps1 status
 #>
@@ -29,6 +29,8 @@ $Implemented = [ordered]@{
     'emergency-stop' = 'emergency-stop [status|clear] : interrompt les sessions, arrête agents et relais MCP, décharge les modèles (sans suppression)'
     'continue'       = 'continue install|on|off|status : autocomplétion locale qwen2.5-coder:1.5b via relais 127.0.0.1:11435 (désactivée par défaut)'
     'project'        = 'project list|create <id>|open <id>|stop <id> : projets Dev Containers isolés ; seul le projet ouvert est partagé avec OpenCode'
+    'profile'        = 'profile list | show <A|B|C> | apply <A|B|C> --confirm : profils de performance (BK1, vérification, rollback)'
+    'monitor'        = 'monitor status | watch [secondes] [nombre] : CPU, RAM Windows/WSL2, swap, SSD, modèle actif, alertes, historique local'
 }
 # Modules démarrables : profils Compose, image (variables .env), volumes externes requis, services arrêtés par stop
 $Modules = @{
@@ -37,14 +39,14 @@ $Modules = @{
                     StopServices = @('opencode', 'opencode-net'); Secrets = @('secrets\opencode.env'); ConfigCheck = 'config\opencode\generate-config.ps1' }
 }
 $Planned = [ordered]@{
-    'profile'        = 'Afficher / appliquer un profil (A-C, N1-N4, S1-S4, BK1-BK3)'
-    'monitor'        = 'Supervision selon config/monitoring/thresholds.yaml'
     'backup'         = 'Sauvegarde BK1 / BK2 / BK3'
     'restore'        = 'Restauration depuis un point de sauvegarde'
     'maintenance'    = 'Fenêtre de maintenance (profil N2)'
 }
 $EmergencyFlag = Join-Path $Root 'runtime\state\emergency.json'
 . (Join-Path $Root 'scripts\mcp\n4.ps1')
+. (Join-Path $Root 'scripts\perf\profile.ps1')
+. (Join-Path $Root 'scripts\monitor\monitor.ps1')
 
 function Write-Audit([string]$Action, [string]$Target, [string]$Result, [string]$Detail = '') {
     # Journal d'audit local (runtime/logs/audit.jsonl, non versionné). Jamais de secret ni de contenu de fichier.
@@ -458,7 +460,9 @@ function New-AgentRestorePoint([string]$AgentId, [string[]]$Files) {
     New-Item -ItemType Directory -Force $dir | Out-Null
     $sums = @(); $man = @("restore_point: agent_${AgentId}_$ts", 'profile: BK1', "created: $(Get-Date -Format s)", 'files:')
     foreach ($f in $Files) {
-        $rel = $f.Substring($Root.Length + 1); $dst = Join-Path $dir $rel
+        # Fichiers hors dépôt (ex. %USERPROFILE%\.wslconfig, 12.B.1) : rangés sous _host\ et restaurés dans %USERPROFILE%.
+        $rel = if ($f.StartsWith($Root + '\', [StringComparison]::OrdinalIgnoreCase)) { $f.Substring($Root.Length + 1) } else { '_host\' + (Split-Path $f -Leaf) }
+        $dst = Join-Path $dir $rel
         New-Item -ItemType Directory -Force (Split-Path $dst) | Out-Null; Copy-Item $f $dst
         $h = (Get-FileHash $dst -Algorithm SHA256).Hash.ToLowerInvariant(); $sums += "$h  $($rel -replace '\\','/')"; $man += "  - $($rel -replace '\\','/')"
     }
@@ -470,7 +474,8 @@ function Restore-AgentRestorePoint([string]$Dir) {
     foreach ($l in (Get-Content (Join-Path $Dir 'SHA256SUMS.txt'))) {
         $h, $rel = $l -split '\s+', 2; $src = Join-Path $Dir $rel
         if ((Get-FileHash $src -Algorithm SHA256).Hash.ToLowerInvariant() -ne $h) { throw "intégrité du point de restauration : $rel" }
-        Copy-Item $src (Join-Path $Root $rel) -Force
+        $dst = if ($rel -like '_host/*') { Join-Path $env:USERPROFILE ($rel.Substring(6)) } else { Join-Path $Root $rel }
+        Copy-Item $src $dst -Force
     }
 }
 
@@ -833,6 +838,7 @@ function Invoke-Continue {
         }
         'on' {
             Assert-NoEmergency
+            Assert-ResourcesOk   # 12.B.1 : seuil critique (monitor) = blocage des nouveaux chargements de modèle
             $why = @()
             try { $act = Invoke-OcApi 'GET' '/api/session/active' ''; if ($act -match 'ses_') { $why += 'session OpenCode active (une seule inférence à la fois)' } } catch { }
             $other = @(Get-LoadedModels | Where-Object { $_ -ne 'qwen2.5-coder:1.5b' }); if ($other) { $why += "modèle chargé par OpenCode : $($other -join ', ') (aucun déchargement automatique)" }
@@ -916,6 +922,8 @@ function Invoke-Project {
 }
 
 switch ($Command.ToLowerInvariant()) {
+    'profile'        { try { Invoke-Profile $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
+    'monitor'        { try { Invoke-Monitor $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
     'continue'       { try { Invoke-Continue $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
     'project'        { try { Invoke-Project $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
     'permissions'    { try { Invoke-Permissions $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }

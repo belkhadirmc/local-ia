@@ -9,12 +9,15 @@ applied:
   performance:
     profile: B
     status: applied
-    source: "%USERPROFILE%\\.wslconfig"
-    verified: "2026-11-25 (action 2.B.5)"
+    source: "%USERPROFILE%\\.wslconfig + config/ollama/ollama.env"
+    verified: "2026-11-26 (12.B.1, local-ai.ps1 profile apply B vérifié)"
+    management: "local-ai.ps1 profile list|show|apply <A|B|C> --confirm (BK1, vérification, rollback)"
     measured:
-      cpus: 8
+      cpus: 16
       memory_gib: 23.47
       swap_gib: 8
+    ollama_tuning: "num_thread auto (= 8 avec 16 vCPU), num_batch 512, Flash Attention auto, KV q8_0, contexte 8192, keep_alive 5m, Vulkan 0"
+    throughput: "qwen3.5:4b 8,51 t/s (+22 %), qwen3-coder:30b 8,65 t/s (+7 %) — ADR-0012"
   network:
     profile: N1
     status: applied
@@ -75,15 +78,16 @@ modules:
     telemetry: false
     indexing: false
     pinned: true
-    verified: "2026-11-26 (11.B.1 API du relais ; 11.B.2 autocomplétion et Tab validés manuellement par l'utilisateur)"
+    verified: "2026-11-26 (11.B.1 API du relais ; autocomplétion et Tab validés manuellement par l'utilisateur)"
   projects:
     status: ready
     extension: "ms-vscode-remote.remote-containers@0.481.0 (pinned)"
     image: "mcr.microsoft.com/devcontainers/base:3.0.14-noble@sha256:6d5b4ab2e68690be81f114a096f147fd95f0230910bcd17421e84459e5a17e1a"
     active: none
     sharing: "seul le projet ouvert est monté dans OpenCode (/data/workspace/<id>)"
-    verified: "2026-11-26 (11.B.1, projets témoins supprimés)"
+    verified: "2026-11-26 (11.B.1 ; projet demo Ubuntu 24.04.5 non-root ouvert manuellement dans VS Code par l'utilisateur)"
   vscode:
-    terminal_profile: "OpenCode (local-ai) — TUI avec TMPDIR=/tui-tmp (tmpfs exécutable dédié, 11.B.2)"
+    terminal_profile: "OpenCode (local-ai) — TUI avec TMPDIR=/tui-tmp (tmpfs exécutable dédié, 11.B.2), validé manuellement dans VS Code"
     web: "http://127.0.0.1:4096"
-note: "État appliqué renseigné manuellement ; à automatiser via local-ai.ps1 profile (non implémenté)."
+monitoring: "local-ai.ps1 monitor status|watch ; historique runtime/monitor (7 j), audit 30 j ; seuils config/monitoring/thresholds.yaml"
+note: "État appliqué : performance gérée par local-ai.ps1 profile (12.B.1) ; autres sections renseignées manuellement."

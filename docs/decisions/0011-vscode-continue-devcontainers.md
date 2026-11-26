@@ -60,7 +60,7 @@ le `package.json` et le code de Continue 2.0.0 (et non supposés) : `continue.*`
 | Projet témoin : vscode uid 1000, CapEff 0, NoNewPrivs 1, sudo bloqué, pas de socket Docker, seul son workspace visible | Conteneur | PASS |
 | Isolation : depuis le Dev Container, Internet, Ollama, OpenCode et l'autre projet injoignables ; OpenCode ne voit que le projet ouvert | Conteneur | PASS |
 | Partage et persistance : fichiers écrits des deux côtés, conservés après arrêt/réouverture ; bascule `demo-a` → `demo-b` | Conteneur | PASS (après correctif `nocopy`) |
-| Complétion dans l'éditeur VS Code (Continue), ouverture « Reopen in Container », terminal « OpenCode (local-ai) » | Interface | **NON EFFECTUÉ** (aucune saisie dans l'IDE possible depuis cette session) |
+| Complétion dans l'éditeur VS Code (Continue), ouverture « Reopen in Container », terminal « OpenCode (local-ai) » | Interface | Non effectué en 11.B.1 ; **PASS manuel par l'utilisateur** (Continue/Tab, TUI via profil VS Code, Dev Container demo Ubuntu 24.04.5 non-root), consigné en 12.B.1 |
 
 Ressources de test supprimées (projets `demo-a`, `demo-b` : conteneurs, réseaux, volumes, dossiers, points de montage vides).
 
@@ -80,7 +80,7 @@ BK1 : `backups/restore-points/11.B.2_20261126_182952`.
 |---|---|---|
 | Échec reproduit avant correctif (`/tmp` noexec) | CLI | PASS (reproduit) |
 | `local-ai.ps1 tui` dans un vrai terminal (commande identique au profil VS Code) : écran OpenCode 2.3.2, Assistant, modèle local ; bibliothèque chargée depuis `/tui-tmp` | Terminal | PASS |
-| Profil « OpenCode (local-ai) » ouvert depuis VS Code | Interface | NON EFFECTUÉ (même commande testée hors VS Code) |
+| Profil « OpenCode (local-ai) » ouvert depuis VS Code | Interface | PASS manuel par l'utilisateur (consigné en 12.B.1) |
 | `/tmp` toujours noexec (exécution refusée), serveur sans `TMPDIR` | Conteneur | PASS |
 | Web 200, API sans authentification 401, 4 sessions conservées, aucune route par défaut, Internet injoignable, 11434 non publié | API | PASS |
 | Autocomplétion et Tab Continue dans l'éditeur | Interface (utilisateur) | PASS (validé manuellement) |

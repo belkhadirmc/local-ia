@@ -1,0 +1,11 @@
+# Débits de référence (tokens/s en sortie, 128 tokens, temperature 0) affichés par local-ai.ps1 monitor ("débit disponible").
+# 12.B.1 = microtests profil B (16 vCPU, Ollama auto 8 threads, KV q8_0) ; 6.B.1 = benchmarks (8 vCPU, 4 threads) non remesurés.
+schema: local-ai/monitoring/throughput/v1
+out_tps:
+  "qwen3.5:4b-q4_K_M": 8.51      # 12.B.1 (6.B.1 : 7.42)
+  "qwen3-coder:30b": 8.65        # 12.B.1 (6.B.1 : 8.11)
+  "qwen2.5-coder:1.5b": 21.51    # 6.B.1
+  "qwen2.5-coder:7b": 5.12       # 6.B.1
+  "qwen3.5:9b-q4_K_M": 3.16      # 6.B.1
+  "qwen2.5-coder:14b": 2.55      # 6.B.1
+  "gpt-oss:20b": 6.22            # 6.B.1

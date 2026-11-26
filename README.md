@@ -1,13 +1,16 @@
 # local-ai
 
 Infrastructure de développement multi-agent locale : Docker Desktop (WSL2), Ollama, OpenCode, Continue, VS Code.
-État (11.B.2) : **Ollama 0.40.18** (CPU, réseau interne, aucun port publié) avec **7 modèles** (52,98 Gio, aucun chargé au repos, benchmarks 6.B.1) ;
+État (12.B.1) : **Ollama 0.40.18** (CPU, réseau interne, aucun port publié) avec **7 modèles** (52,98 Gio, aucun chargé au repos, benchmarks 6.B.1) ;
 **OpenCode 2.3.2** sur `http://127.0.0.1:4096` (authentification locale, sans accès Internet, fournisseur Ollama interne uniquement) ;
 **10 agents** finalisés (9 dans OpenCode, Assistant par défaut ; autocomplétion Continue à l'étape 11), permissions S2 et délégations de profondeur 1 appliquées par le serveur ; raisonnement des modèles qwen3.5 désactivé dans OpenCode (9.B.2 : premier message ≈ 110 s à froid, puis ≈ 10 s) ;
 sécurité S1–S4 (S2 par défaut), permissions gérées, refus techniques prioritaires, arrêt d'urgence et journal d'audit (10.B.1) ;
 MCP GitHub, GitLab, Jira, Confluence **préparés et désactivés**, architecture N4 (relais isolés, sortie filtrée par destination) prête ;
 VS Code : **Continue 2.0.0** (autocomplétion locale qwen2.5-coder:1.5b via relais 127.0.0.1:11435, désactivée par défaut, Tab validé) et **Dev Containers 0.481.0**, extensions épinglées
-(projets isolés : workspace dédié, réseau interne, seul le projet ouvert partagé avec OpenCode) — guide : `docs/guides/projects.md`.
+(projets isolés : workspace dédié, réseau interne, seul le projet ouvert partagé avec OpenCode) — guide : `docs/guides/projects.md` ;
+tests d'interface VS Code (Continue/Tab, TUI, Dev Container Ubuntu 24.04.5 non-root) validés manuellement ;
+performances (12.B.1, ADR-0012) : WSL2 16 vCPU / 24 Gio, Ollama 8 threads, cache KV q8_0 — qwen3.5:4b **8,5 t/s (+22 %)**, qwen3-coder:30b 8,65 t/s (+7 %) ;
+profils A/B/C appliqués par `profile apply`, supervision légère `monitor`.
 
 ## Arborescence
 
@@ -19,7 +22,7 @@ VS Code : **Continue 2.0.0** (autocomplétion locale qwen2.5-coder:1.5b via rela
 | `models/` | registre des modèles, benchmarks |
 | `mcp/` | registre et serveurs officiels GitHub, GitLab, Jira, Confluence (préparés, désactivés) |
 | `profiles/` | performance A/B/C, réseau N1-N4, sécurité S1-S4, sauvegarde BK1-BK3 |
-| `scripts/` | lifecycle, profils, supervision, maintenance, sauvegarde (à venir) |
+| `scripts/` | MCP N4, profils de performance (`perf/`), supervision (`monitor/`) ; maintenance et sauvegarde à venir |
 | `projects/` | projets Dev Containers (non suivis), `templates/devcontainer/` suivi (11.B.1) |
 | `secrets/` | identifiants réels — jamais versionnés |
 | `runtime/`, `backups/`, `exports/` | données locales — jamais versionnées |
@@ -46,13 +49,17 @@ VS Code : **Continue 2.0.0** (autocomplétion locale qwen2.5-coder:1.5b via rela
 .\local-ai.ps1 agent list                # agents, modèles, écarts à l'affectation initiale, avertissements outils/RAM
 .\local-ai.ps1 agent model <agent> [<modèle>]   # afficher / changer durablement (BK1 + rollback, OpenCode régénéré)
 .\local-ai.ps1 agent reset <agent|all>   # revenir aux affectations initiales (agents/assignments.initial.yaml)
+.\local-ai.ps1 profile list|show <A|B|C>         # profils de performance ; * = appliqué
+.\local-ai.ps1 profile apply <A|B|C> --confirm   # BK1 (.wslconfig comprise), redémarrage WSL2 si besoin, vérification, rollback
+.\local-ai.ps1 monitor status                    # CPU, RAM Windows/WSL2, swap, SSD, modèle actif, débit, alertes
+.\local-ai.ps1 monitor watch [s] [n]             # mesure périodique, historique runtime/monitor (7 j)
+.\models\benchmarks\microtest.ps1 -Label x [-NumThread n] [-Ctx n]   # microtest court (128 tokens), pas un benchmark complet
 ```
 
 Sélection **temporaire** d'un modèle : sélecteur de la session dans le Web ou le TUI (7 modèles du registre).
 OpenCode Desktop (Windows) : **non utilisé** — il impose un serveur autonome sur l'hôte avec accès Internet (ADR-0008, R9).
 
-Mot de passe Web/API : `secrets/opencode.env` (non versionné). Les autres commandes (`profile`, `monitor`,
-`backup`, `restore`, `maintenance`) sont prévues et échouent explicitement tant qu'elles ne sont pas implémentées.
+Mot de passe Web/API : `secrets/opencode.env` (non versionné). Les autres commandes (`backup`, `restore`, `maintenance`) sont prévues et échouent explicitement tant qu'elles ne sont pas implémentées.
 
 ## Profils par défaut
 

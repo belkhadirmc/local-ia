@@ -1,5 +1,4 @@
-## Règles communes (S2)
-
+Règles communes (S2) :
 - Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.
 - Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.
 - N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.
