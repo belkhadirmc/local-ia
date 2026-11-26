@@ -246,6 +246,20 @@ function Test-Config {
             $wrongIgnored = @($mustTrack | Where-Object { (Invoke-Native git @('check-ignore', '-q', '--no-index', $_)).Code -eq 0 })
             Add-Result 'Exclusions Git' $(if ($notIgnored -or $wrongIgnored) { 'FAIL' } else { 'PASS' }) ((@($notIgnored | ForEach-Object { "non exclu: $_" }) + @($wrongIgnored | ForEach-Object { "exclu à tort: $_" })) -join ' | ')
         } else { Add-Result 'Exclusions Git' 'NON TESTÉ' 'dépôt Git absent' }
+
+        # 8. V1 locale uniquement (13.B.1, ADR-0013) : aucun fournisseur, modèle ni repli cloud (contrôle statique, sans inférence)
+        $v1 = @()
+        $oc = Get-Content 'config\opencode\opencode.json' -Raw -Encoding UTF8 | ConvertFrom-Json
+        $prov = @($oc.providers.PSObject.Properties.Name); if ($prov.Count -ne 1 -or $prov[0] -ne 'ollama') { $v1 += "fournisseurs : $($prov -join ',')" }
+        foreach ($k in 'small_model', 'enabled_providers') { if (@($oc.PSObject.Properties.Name) -contains $k) { $v1 += "clé $k présente" } }
+        if ($oc.model -notlike 'ollama/*') { $v1 += "modèle par défaut $($oc.model)" }
+        foreach ($a in $oc.agents.PSObject.Properties) { if ((@($a.Value.PSObject.Properties.Name) -contains 'model') -and $a.Value.model -notlike 'ollama/*') { $v1 += "agent $($a.Name) : $($a.Value.model)" } }
+        $pol = @($oc.policies | Where-Object { $_.action -eq 'provider.use' })
+        if (-not ($pol | Where-Object { $_.resource -eq '*' -and $_.effect -eq 'deny' }) -or @($pol | Where-Object { $_.effect -eq 'allow' -and $_.resource -ne 'ollama' }).Count) { $v1 += 'politique provider.use non limitée à ollama' }
+        $oe = [IO.File]::ReadAllText((Join-Path $Root 'config\ollama\ollama.env')); if ($oe -notmatch '(?m)^OLLAMA_NO_CLOUD=1\s*$') { $v1 += 'OLLAMA_NO_CLOUD<>1' }
+        $reg = [IO.File]::ReadAllText((Join-Path $Root 'models\registry.yaml')); if ($reg -match '(?im)^\s+(tag|id):\s*"?[^"\r\n]*(:cloud|-cloud)\b') { $v1 += 'modèle cloud dans le registre' }
+        $cc = [IO.File]::ReadAllText((Join-Path $Root 'config\continue\config.yaml')); if (@([regex]::Matches($cc, '(?m)^\s+provider:\s*(\S+)') | Where-Object { $_.Groups[1].Value -ne 'ollama' }).Count -or $cc -notmatch 'apiBase:\s*http://127\.0\.0\.1:11435') { $v1 += 'Continue non local' }
+        Add-Result 'V1 locale (aucun cloud)' $(if ($v1) { 'FAIL' } else { 'PASS' }) ($v1 -join ' | ')
     } finally { Pop-Location }
 
     $results | Format-Table -AutoSize -Wrap | Out-String -Width 220 | Write-Output

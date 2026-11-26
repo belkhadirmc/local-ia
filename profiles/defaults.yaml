@@ -86,6 +86,12 @@ modules:
     active: none
     sharing: "seul le projet ouvert est monté dans OpenCode (/data/workspace/<id>)"
     verified: "2026-11-26 (11.B.1 ; projet demo Ubuntu 24.04.5 non-root ouvert manuellement dans VS Code par l'utilisateur)"
+  cloud:
+    status: deferred_post_v1
+    implemented: false
+    decision: "ADR-0013 : V1 100 % locale (fournisseur OpenCode ollama seul, provider.use refusé ailleurs, OLLAMA_NO_CLOUD=1, aucun repli) ; N3 conservé comme point d'extension"
+    guard: "local-ai.ps1 config : contrôle « V1 locale (aucun cloud) »"
+    verified: "2026-11-26 (13.B.1, sans inférence)"
   vscode:
     terminal_profile: "OpenCode (local-ai) — TUI avec TMPDIR=/tui-tmp (tmpfs exécutable dédié, 11.B.2), validé manuellement dans VS Code"
     web: "http://127.0.0.1:4096"

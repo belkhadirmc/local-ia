@@ -1,4 +1,4 @@
-# Profil réseau N3.
+# Profil réseau N3 — POINT D'EXTENSION FUTUR, HORS V1 (ADR-0013). Aucun relais, client ni fournisseur cloud implémenté.
 schema: local-ai/profile/network/v1
 id: N3
 name: cloud-manual
@@ -8,6 +8,10 @@ allowed_networks:
   - "local-ai-project-*"
   - local-ai-cloud
 authorization: manual_per_session
+status: deferred_post_v1
+implemented: false
+applicable_in_v1: false
+extension_procedure: docs/decisions/0013-cloud-differe-hors-v1.md
 ollama:
   OLLAMA_NO_CLOUD: 1
 forbidden:

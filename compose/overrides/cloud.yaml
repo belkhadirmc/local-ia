@@ -1,4 +1,5 @@
 # SURCHARGE SUR AUTORISATION — réseau local-ai-cloud : IA cloud manuelle, par session.
+# HORS V1 (ADR-0013) : point d'extension réservé ; aucun service ne le déclare, aucun relais/client/fournisseur cloud.
 # Profil réseau requis : N3. Usage : docker compose -f compose.yaml -f compose/overrides/cloud.yaml ...
 # Un service n'obtient ce réseau que s'il le déclare explicitement dans une surcharge dédiée.
 networks:

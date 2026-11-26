@@ -19,6 +19,7 @@ networks:
     authorization: required
     profile: N3
     defined_in: compose/overrides/cloud.yaml
+    status: deferred_post_v1   # ADR-0013 : réservé, jamais attaché en V1
   - name: local-ai-mcp
     internal: false
     authorization: required
