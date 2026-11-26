@@ -24,7 +24,7 @@ $Implemented = [ordered]@{
     'model'  = 'model list | model show <tag> (lecture seule ; pull/rm NON IMPLÉMENTÉS)'
     'tui'    = 'Interface terminal OpenCode (dans le conteneur, serveur interne)'
     'mcp'    = 'mcp list | status | enable <id> --authorize-n4 [--witness] | disable <id> [--revoke] (relais N4 isolés)'
-    'agent'  = 'agent list | agent model <agent> [<modèle>] | agent reset <agent|all> (BK1 + rollback, OpenCode régénéré)'
+    'agent'  = 'agent list | model <agent> [<modèle>] | reset <agent|all> (BK1 + rollback) | handoff <agent> "<consigne>" [--model <tag>] (transfert manuel)'
     'permissions'    = 'permissions list|check|grant|revoke|reset|profile (S1-S4, autorisations persistantes, refus techniques prioritaires)'
     'emergency-stop' = 'emergency-stop [status|clear] : interrompt les sessions, arrête agents et relais MCP, décharge les modèles (sans suppression)'
     'continue'       = 'continue install|on|off|status : autocomplétion locale qwen2.5-coder:1.5b via relais 127.0.0.1:11435 (désactivée par défaut)'
@@ -260,6 +260,18 @@ function Test-Config {
         $reg = [IO.File]::ReadAllText((Join-Path $Root 'models\registry.yaml')); if ($reg -match '(?im)^\s+(tag|id):\s*"?[^"\r\n]*(:cloud|-cloud)\b') { $v1 += 'modèle cloud dans le registre' }
         $cc = [IO.File]::ReadAllText((Join-Path $Root 'config\continue\config.yaml')); if (@([regex]::Matches($cc, '(?m)^\s+provider:\s*(\S+)') | Where-Object { $_.Groups[1].Value -ne 'ollama' }).Count -or $cc -notmatch 'apiBase:\s*http://127\.0\.0\.1:11435') { $v1 += 'Continue non local' }
         Add-Result 'V1 locale (aucun cloud)' $(if ($v1) { 'FAIL' } else { 'PASS' }) ($v1 -join ' | ')
+
+        # 9. Passerelle d'inférence et durcissements 14.B.1 (contrôle statique)
+        $g = @(); $oy = [IO.File]::ReadAllText((Join-Path $Root 'compose\templates\ollama.yaml'))
+        $gm = ([regex]::Match($oy, 'GATE_MODELS:\s*"([^"]+)"')).Groups[1].Value -split ',' | Sort-Object
+        $rm = @([regex]::Matches($reg, '(?m)^\s+tag:\s*"?([^"\s]+)') | ForEach-Object { $_.Groups[1].Value }) | Sort-Object
+        if (($gm -join ',') -ne ($rm -join ',')) { $g += "GATE_MODELS <> registre ($($gm -join ',') / $($rm -join ','))" }
+        $ollSvc = [regex]::Match($oy, '(?ms)^  ollama:\s*\n(.*?)(?=^  \S)').Groups[1].Value -replace '(?m)^\s*#.*$', ''
+        if ($ollSvc -match 'local-ai-core' -or $ollSvc -notmatch 'local-ai-inference') { $g += 'Ollama doit être sur local-ai-inference seul' }
+        if ($oy -notmatch '(?ms)^  ollama-gate:.*?aliases:\s*\[ollama\]') { $g += 'alias ollama de la passerelle absent' }
+        if ($oc.shell -ne '/etc/local-ai/agent-shell') { $g += 'shell des agents non filtré (R14)' }
+        if (@($oc.agents.PSObject.Properties | ForEach-Object { Get-JsonProp $_.Value 'permissions' } | Where-Object { $_ -and $_.action -eq 'subagent' -and $_.effect -ne 'deny' }).Count -and (Get-Content (Join-Path $Root "profiles\security\$(Get-SecProfile).yaml") -Raw) -match 'delegation_mode:\s*manual') { $g += 'délégation automatique présente en mode manual (R12)' }
+        Add-Result 'Passerelle d''inférence et durcissements' $(if ($g) { 'FAIL' } else { 'PASS' }) ($g -join ' | ')
     } finally { Pop-Location }
 
     $results | Format-Table -AutoSize -Wrap | Out-String -Width 220 | Write-Output
@@ -327,6 +339,7 @@ function Start-Module {
     Assert-NoEmergency
     Assert-Preflight $m
     Write-Audit 'start' $m.Name 'demandé'
+    Start-Sentinel   # 14.B.1 : mesure RAM Windows pour la passerelle d'inférence (R24) ; runtime\state doit exister avant le montage
     Push-Location $Root
     try {
         $pf = @($m.Profiles | ForEach-Object { '--profile', $_ })
@@ -353,6 +366,7 @@ function Stop-Module {
         $pf = @($m.Profiles | ForEach-Object { '--profile', $_ })
         $r = Invoke-Native docker (@('compose') + $pf + @('stop') + @($m.StopServices))
         if ($r.Code -ne 0) { throw "docker compose stop a échoué : $($r.Output)" }
+        if ($m.Name -eq 'ollama') { Stop-Sentinel }
         Write-Output "Module $($m.Name) arrêté (conteneurs, réseau et volume conservés)."
     } finally { Pop-Location }
 }
@@ -519,6 +533,24 @@ function Invoke-Agent {
     $findAgent = { param($n) $a = $agents | Where-Object Id -eq $n | Select-Object -First 1; if (-not $a) { throw "Agent '$n' inconnu (agents : $($agents.Id -join ', '))." }; $a }
     $findModel = { param($n) $m = $models | Where-Object { $_.Id -eq $n -or $_.Tag -eq $n } | Select-Object -First 1; if (-not $m) { throw "Modèle '$n' absent de models/registry.yaml (aucun téléchargement ; disponibles : $($models.Tag -join ', '))." }; $m }
     switch ($sub) {
+        'handoff' {
+            # 14.B.1 (R12) : transfert MANUEL fiable — nouvelle session de l'agent cible (projet ouvert), consigne envoyée, aucune
+            # attente imbriquée ni délégation automatique. Modèle de session optionnel (--model, sans changement d'affectation).
+            if ($Args0.Count -lt 3) { throw 'Usage : agent handoff <agent> "<consigne>" [--model <tag>] [--dry-run]' }
+            Assert-NoEmergency
+            $a = & $findAgent $Args0[1]; if ($a.Continue) { throw "Agent '$($a.Id)' hors OpenCode (Continue)." }
+            $i = [array]::IndexOf($Args0, '--model'); $mt = if ($i -ge 0 -and $i + 1 -lt $Args0.Count) { (& $findModel $Args0[$i + 1]).Tag } else { $null }
+            $proj = Get-ActiveProject; $dir = if ($proj) { "/data/workspace/$proj" } else { '/data/workspace' }
+            $body = [ordered]@{ title = "Transfert -> $($a.Id) $(Get-Date -Format 'HH:mm')"; agent = $a.Id; location = @{ directory = $dir } }
+            if ($mt) { $body.model = @{ providerID = 'ollama'; id = $mt } }
+            if ($Args0 -contains '--dry-run') { Write-Output "Transfert (simulation) : agent $($a.Id), répertoire $dir$(if ($mt) { ", modèle de session $mt" }), consigne de $($Args0[2].Length) caractères."; return }
+            $s = Invoke-OcApi 'POST' '/api/session' ($body | ConvertTo-Json -Compress -Depth 5)
+            $sid = ([regex]::Match($s, '"id":"(ses_[^"]+)"')).Groups[1].Value; if (-not $sid) { throw "création de session : $s" }
+            $p = Invoke-OcApi 'POST' "/api/session/$sid/prompt" (@{ text = $Args0[2] } | ConvertTo-Json -Compress)
+            if ($p -notmatch '"type":"user"') { throw "envoi de la consigne : $p" }
+            Write-Audit 'agent.handoff' $a.Id 'envoyé' "session $sid"
+            Write-Output "Transfert envoyé à $($a.Id) : session $sid ($dir). Suivi : Web http://127.0.0.1:4096 ou .\local-ai.ps1 tui."
+        }
         'list' {
             $agents | ForEach-Object { $a = $_; $m = $models | Where-Object Id -eq $a.Ref | Select-Object -First 1
                 [pscustomobject]@{ Agent = $a.Id; Modèle = $(if ($m) { $m.Tag } else { "$($a.Ref) (INCONNU)" }); Initial = $(if ($a.Ref -eq $a.Initial) { 'oui' } else { "NON ($($a.Initial))" })
@@ -660,11 +692,13 @@ function Get-OpenCodeId { (Invoke-Native docker @('compose', '-f', (Join-Path $R
 function Invoke-OcApi([string]$Method, [string]$Path, [string]$Data) {
     $id = Get-OpenCodeId; if (-not $id) { throw "OpenCode n'est pas démarré." }
     if (-not $Data) { return (Invoke-Native docker @('exec', $id, 'opencode', 'api', '--server', 'http://127.0.0.1:4096', $Method, $Path)).Output }
-    # PowerShell 5.1 altère les arguments natifs contenant espaces et guillemets : corps JSON transmis par l'entrée standard (UTF-8 sans BOM).
-    $prevEnc = $OutputEncoding; $OutputEncoding = New-Object Text.UTF8Encoding $false
+    # PowerShell 5.1 altère les arguments natifs (guillemets) et ajoute BOM + CR au flux natif (l'API de prompt rejette alors le corps,
+    # constaté en 14.B.1) : corps JSON transmis en base64 (ASCII), décodé dans le conteneur.
+    $b64 = [Convert]::ToBase64String((New-Object Text.UTF8Encoding $false).GetBytes($Data))
+    $prevOut = [Console]::OutputEncoding; [Console]::OutputEncoding = New-Object Text.UTF8Encoding $false
     $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
-    try { $out = $Data | & docker exec -i $id /bin/sh -c 'd=$(cat); exec opencode api --server http://127.0.0.1:4096 \"$0\" \"$1\" -d \"$d\"' $Method $Path 2>&1 | ForEach-Object { "$_" } }
-    finally { $ErrorActionPreference = $prev; $OutputEncoding = $prevEnc }
+    try { $out = & docker exec $id /bin/sh -c 'd=$(printf %s $2 | base64 -d); exec opencode api --server http://127.0.0.1:4096 \"$0\" \"$1\" -d \"$d\"' $Method $Path $b64 2>&1 | ForEach-Object { "$_" } }
+    finally { $ErrorActionPreference = $prev; [Console]::OutputEncoding = $prevOut }
     $out -join "`n"
 }
 function Test-WildMatch([string]$Pattern, [string]$Value) { $Value -like ($Pattern -replace '\[', '`[' -replace '\]', '`]') }

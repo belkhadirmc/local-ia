@@ -6,9 +6,12 @@
 #   POST /api/show        -> métadonnées du modèle autorisé uniquement
 #   POST /api/generate    -> complétion (FIM) du modèle autorisé uniquement, keep_alive plafonné
 # Tout le reste : 403. Corps > 1 Mio : 413. Autre modèle chargé (OpenCode actif) : 409, aucune substitution ni déchargement.
+# 14.B.1 : corps analysé par LocalAiJson (JSON strict, clé dupliquée refusée) au lieu d'expressions régulières (R20) ;
+# keep_alive réécrit par réencodage ; amont = passerelle d'inférence (verrou commun avec OpenCode : 409 si inférence en cours).
 use strict; use warnings;
 use IO::Socket::INET;
 use POSIX ':sys_wait_h';
+use lib '/etc/local-ai'; use LocalAiJson qw(decode_json encode_json jnum);
 
 my $MODEL      = $ENV{RELAY_MODEL}      // 'qwen2.5-coder:1.5b';
 my $UPSTREAM   = $ENV{RELAY_UPSTREAM}   // 'ollama:11434';
@@ -38,7 +41,13 @@ sub upstream_call {
     return undef unless defined $r;
     $r =~ s/\A.*?\r\n\r\n//s; return $r;
 }
-sub models_in { my ($b) = @_; my @m = ($b =~ /(?<!\\)"model"\s*:\s*"((?:[^"\\]|\\.)*)"/g); return @m; }
+sub parse_body {
+    # Renvoie (objet décodé, erreur) ; le texte est décodé en UTF-8 strict avant analyse.
+    my ($b) = @_; my $t = $b;
+    return (undef, 'UTF-8 invalide') unless utf8::decode($t);
+    my $j = eval { decode_json($t) }; return (undef, 'JSON invalide') unless ref $j eq 'HASH';
+    return ($j, undef);
+}
 
 while (1) {
     my $c = $srv->accept or next;   # accept interrompu par SIGCHLD (EINTR) : on continue
@@ -62,21 +71,25 @@ while (1) {
         reply($c, 200, 'OK', qq({"models":[{"name":"$MODEL","model":"$MODEL","details":{"family":"qwen2","format":"gguf"}}]})); logline("200 GET /api/tags (filtré)"); exit 0;
     }
     if ($method ne 'POST' || ($path ne '/api/generate' && $path ne '/api/show')) { reply($c, 403, 'Forbidden', '{"error":"opération non autorisée par le relais local-ai"}'); logline("403 $method $path"); exit 0; }
-    my @m = models_in($body);
-    if (!@m || grep { $_ ne $MODEL } @m) { reply($c, 403, 'Forbidden', qq({"error":"seul le modèle $MODEL est autorisé"})); logline("403 $path modèle refusé"); exit 0; }
+    my ($j, $err) = parse_body($body);
+    if (!$j) { reply($c, 400, 'Bad Request', qq({"error":"$err"})); logline("400 $path $err"); exit 0; }
+    my $m = $j->{model} // ($path eq '/api/show' ? $j->{name} : undef);
+    if (!defined $m || ref $m || $m ne $MODEL || (exists $j->{name} && exists $j->{model} && (ref $j->{name} || $j->{name} ne $MODEL))) { reply($c, 403, 'Forbidden', qq({"error":"seul le modèle $MODEL est autorisé"})); logline("403 $path modèle refusé"); exit 0; }
     if ($path eq '/api/generate') {
         # Aucune concurrence : si un autre modèle est chargé (OpenCode), refus explicite sans déchargement ni substitution.
         my $ps = upstream_call('GET', '/api/ps');
         if (!defined $ps) { reply($c, 502, 'Bad Gateway', '{"error":"Ollama injoignable"}'); logline("502 /api/ps"); exit 0; }
-        my @loaded = ($ps =~ /"name"\s*:\s*"([^"]+)"/g);
+        my $pj = eval { decode_json($ps) };
+        if (ref $pj ne 'HASH') { reply($c, 502, 'Bad Gateway', '{"error":"réponse /api/ps invalide"}'); logline("502 /api/ps invalide"); exit 0; }
+        my @loaded = map { $_->{name} // '?' } @{ $pj->{models} || [] };
         if (grep { $_ ne $MODEL } @loaded) { reply($c, 409, 'Conflict', '{"error":"inférence OpenCode en cours (autre modèle chargé) : autocomplétion suspendue"}'); logline("409 conflit (" . join(',', @loaded) . ")"); exit 0; }
-        # keep_alive plafonné (Continue envoie 1800 s par défaut)
-        if ($body =~ /(?<!\\)"keep_alive"\s*:/) { $body =~ s/(?<!\\)"keep_alive"\s*:\s*("[^"]*"|-?[0-9.]+)/"keep_alive":$KEEP_ALIVE/; }
-        else { $body =~ s/\}\s*\z/,"keep_alive":$KEEP_ALIVE}/; }
+        # keep_alive plafonné (Continue envoie 1800 s par défaut) : réécriture par réencodage, jamais par substitution de texte
+        $j->{keep_alive} = jnum($KEEP_ALIVE);
+        $body = encode_json($j); utf8::encode($body);
     }
     my $u = IO::Socket::INET->new(PeerAddr => $UPSTREAM, Proto => 'tcp', Timeout => 10);
     if (!$u) { reply($c, 502, 'Bad Gateway', '{"error":"Ollama injoignable"}'); logline("502 $path"); exit 0; }
-    print $u "POST $path HTTP/1.0\r\nHost: ollama\r\nContent-Type: application/json\r\nContent-Length: " . length($body) . "\r\nConnection: close\r\n\r\n$body";
+    print $u "POST $path HTTP/1.0\r\nHost: ollama\r\nX-Local-AI-Client: continue\r\nContent-Type: application/json\r\nContent-Length: " . length($body) . "\r\nConnection: close\r\n\r\n$body";
     # Réponse transmise telle quelle (flux NDJSON compris), HTTP/1.0 -> fermeture en fin de flux.
     my $buf; while (sysread($u, $buf, 65536)) { print $c $buf or last; }
     close $u; logline("relayé POST $path ($MODEL)");

@@ -49,6 +49,14 @@ modules:
     models_size_gib: 52.98
     models_tested_offline: "7/7 PASS (5.B.1)"
     verified: "2026-11-25 (actions 4.B.1, 5.B.1)"
+    network: "local-ai-inference (interne) uniquement depuis 14.B.1 ; joint par la passerelle seule"
+  inference_gate:
+    status: running
+    service: ollama-gate
+    script: config/gate/gate.pl
+    role: "seul accès à Ollama (Web, TUI, agents, Continue) : JSON strict, modèles du registre, routes d'administration refusées, verrou d'inférence unique, garde RAM avant/pendant (Windows >= 4 Gio projetés, sentinelle hôte), arrêt d'urgence"
+    sentinel: "scripts/monitor/sentinel.ps1 (runtime/state/host-ram.json, toutes les 2 s, démarrée par start)"
+    verified: "2026-11-26 (14.B.1 : passerelle 15/15, Continue 7/7, JSON 21/21, 30B/20B refusés, 14B admis)"
   opencode:
     status: running
     image: "ghcr.io/anomalyco/opencode:2.3.2@sha256:43d4d0fb1d94fed8db615f865df7661104a39af6ca94dad631c09844b5e3ff22"
@@ -56,9 +64,10 @@ modules:
     volume: local-ai-opencode
     access: "http://127.0.0.1:4096 (Basic, secrets/opencode.env) ; terminal : local-ai.ps1 tui"
     provider: "ollama interne uniquement, 7 modèles, contexte 8192 max"
-    agents: "9 (affectations initiales, non confirmées ; référence agents/assignments.initial.yaml ; gestion local-ai.ps1 agent)"
+    agents: "9 (affectations initiales, non confirmées — R5 bloquante ; recommandations ADR-0014 en attente d'accord ; référence agents/assignments.initial.yaml)"
     clients: "Web et TUI ; Desktop Windows bloqué (serveur autonome imposé, ADR-0008)"
-    delegation: "explicite, à valider en S2 (ask), cibles = variantes cachées <agent>-delegue sans délégation : profondeur 1 imposée (ADR-0009, ADR-0010)"
+    delegation: "MANUELLE (14.B.1, delegation_mode: manual) : aucune règle subagent ; transfert par local-ai.ps1 agent handoff <agent> \"<consigne>\" (ADR-0014)"
+    agent_shell: "/etc/local-ai/agent-shell (sans OPENCODE_PASSWORD, R14)"
     builtin_agents_disabled: [build, plan, general, explore]
     networks: [local-ai-core, local-ai-localhost, local-ai-mcp-relay]
     verified: "2026-11-26 (actions 7.B.1, 8.B.1, 9.B.1, 10.B.1)"

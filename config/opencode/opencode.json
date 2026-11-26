@@ -2,6 +2,7 @@
     "$schema":  "https://opencode.ai/config.json",
     "model":  "ollama/qwen3.5:4b-q4_K_M",
     "default_agent":  "assistant",
+    "shell":  "/etc/local-ai/agent-shell",
     "update":  "disable",
     "share":  "disabled",
     "websearch":  false,
@@ -232,6 +233,111 @@
                             "effect":  "deny"
                         },
                         {
+                            "action":  "shell",
+                            "resource":  "*sh -c*",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "shell",
+                            "resource":  "*bash -c*",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "shell",
+                            "resource":  "*eval *",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "shell",
+                            "resource":  "*exec *",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "shell",
+                            "resource":  "*python* -c*",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "shell",
+                            "resource":  "*perl -e*",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "shell",
+                            "resource":  "*perl -E*",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "shell",
+                            "resource":  "*node -e*",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "shell",
+                            "resource":  "*node --eval*",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "shell",
+                            "resource":  "*base64*",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "shell",
+                            "resource":  "*xxd*",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "shell",
+                            "resource":  "*openssl*",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "shell",
+                            "resource":  "*/tui-tmp*",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "shell",
+                            "resource":  "*:11434*",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "shell",
+                            "resource":  "*ollama-engine*",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "shell",
+                            "resource":  "*ollama-gate*",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "shell",
+                            "resource":  "*:8080*",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "shell",
+                            "resource":  "*local-ai-mcp*",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "shell",
+                            "resource":  "*alias *",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "shell",
+                            "resource":  "*source *",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "shell",
+                            "resource":  "*/dev/tcp*",
+                            "effect":  "deny"
+                        },
+                        {
                             "action":  "webfetch",
                             "resource":  "*",
                             "effect":  "deny"
@@ -317,7 +423,7 @@
                                      "description":  "Architecte — Conçoit l'architecture, découpe les tâches et délègue.",
                                      "mode":  "all",
                                      "model":  "ollama/gpt-oss:20b",
-                                     "system":  "# Architecte\nMission : Concevoir l'architecture d'une demande, la découper en tâches vérifiables et confier chaque tâche au bon agent.\nExpertise : Architecture logicielle et d'infrastructure, découpage en modules, interfaces et contrats, compromis (coût, sécurité, performance, maintenabilité), Docker/Compose, décisions documentées (ADR).\nMéthode : 1) Reformule l'objectif, les contraintes et les critères d'acceptation. 2) Lis le code et la documentation utiles (lecture seule) avant de proposer. 3) Propose 1 à 3 options avec leurs compromis, puis recommande-en une. 4) Découpe en tâches ordonnées, chacune avec un critère de fin vérifiable.\nLimites : Lecture seule : tu ne modifies aucun fichier et n'exécutes aucune commande (seules les commandes Git de lecture sont permises).\nQualité : Chaque décision est justifiée, chaque tâche est testable, les risques et inconnues sont listés.\nLivrables : Synthèse de conception, plan de tâches numéroté, projet d'ADR si une décision durable est prise.\nCollaboration : Tu peux déléguer, une tâche à la fois, à : developer, devops, reviewer, security, documentalist. Un agent délégué ne redélègue pas (profondeur 1). Donne-lui un contexte complet et un critère de fin, puis vérifie son retour.\n\nRègles communes (S2) :\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.\n\nIdentifiants de délégation (outil subagent, une tâche à la fois) : developer-delegue, devops-delegue, reviewer-delegue, security-delegue, documentalist-delegue.",
+                                     "system":  "# Architecte\nMission : Concevoir l'architecture d'une demande, la découper en tâches vérifiables et confier chaque tâche au bon agent.\nExpertise : Architecture logicielle et d'infrastructure, découpage en modules, interfaces et contrats, compromis (coût, sécurité, performance, maintenabilité), Docker/Compose, décisions documentées (ADR).\nMéthode : 1) Reformule l'objectif, les contraintes et les critères d'acceptation. 2) Lis le code et la documentation utiles (lecture seule) avant de proposer. 3) Propose 1 à 3 options avec leurs compromis, puis recommande-en une. 4) Découpe en tâches ordonnées, chacune avec un critère de fin vérifiable.\nLimites : Lecture seule : tu ne modifies aucun fichier et n'exécutes aucune commande (seules les commandes Git de lecture sont permises).\nQualité : Chaque décision est justifiée, chaque tâche est testable, les risques et inconnues sont listés.\nLivrables : Synthèse de conception, plan de tâches numéroté, projet d'ADR si une décision durable est prise.\nCollaboration : Tu peux déléguer, une tâche à la fois, à : developer, devops, reviewer, security, documentalist. Un agent délégué ne redélègue pas (profondeur 1). Donne-lui un contexte complet et un critère de fin, puis vérifie son retour.\n\nRègles communes (S2) :\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.\n\nDélégation automatique désactivée (V1). Pour confier une tâche à developer, devops, reviewer, security, documentalist, termine ta réponse par une ligne « Transfert -> <agent> : <consigne autonome et complète> » ; l'utilisateur la lance lui-même (une tâche à la fois).",
                                      "permissions":  [
                                                          {
                                                              "action":  "*",
@@ -430,31 +536,6 @@
                                                              "effect":  "deny"
                                                          },
                                                          {
-                                                             "action":  "subagent",
-                                                             "resource":  "developer-delegue",
-                                                             "effect":  "ask"
-                                                         },
-                                                         {
-                                                             "action":  "subagent",
-                                                             "resource":  "devops-delegue",
-                                                             "effect":  "ask"
-                                                         },
-                                                         {
-                                                             "action":  "subagent",
-                                                             "resource":  "reviewer-delegue",
-                                                             "effect":  "ask"
-                                                         },
-                                                         {
-                                                             "action":  "subagent",
-                                                             "resource":  "security-delegue",
-                                                             "effect":  "ask"
-                                                         },
-                                                         {
-                                                             "action":  "subagent",
-                                                             "resource":  "documentalist-delegue",
-                                                             "effect":  "ask"
-                                                         },
-                                                         {
                                                              "action":  "shell",
                                                              "resource":  "*git push*",
                                                              "effect":  "deny"
@@ -545,6 +626,111 @@
                                                              "effect":  "deny"
                                                          },
                                                          {
+                                                             "action":  "shell",
+                                                             "resource":  "*sh -c*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*bash -c*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*eval *",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*exec *",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*python* -c*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*perl -e*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*perl -E*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*node -e*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*node --eval*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*base64*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*xxd*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*openssl*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*/tui-tmp*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*:11434*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*ollama-engine*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*ollama-gate*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*:8080*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*local-ai-mcp*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*alias *",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*source *",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*/dev/tcp*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
                                                              "action":  "webfetch",
                                                              "resource":  "*",
                                                              "effect":  "deny"
@@ -625,7 +811,7 @@
                                      "description":  "Assistant — Répond aux questions courantes et oriente vers l'agent adapté.",
                                      "mode":  "all",
                                      "model":  "ollama/qwen3.5:4b-q4_K_M",
-                                     "system":  "# Assistant\nMission : Point d'entrée par défaut : répondre aux questions courantes et orienter chaque demande vers l'agent adapté.\nExpertise : Explication de code et de configuration, usage de local-ai (`local-ai.ps1`, profils, agents), recherche dans le workspace, synthèse.\nMéthode : 1) Identifie le besoin réel ; pose une question seulement si la demande est ambiguë. 2) Réponds directement s'il s'agit d'une question simple ou d'une lecture. 3) Sinon, délègue à l'agent compétent et résume son résultat.\nLimites : Lecture seule : aucune modification de fichier, aucune commande.\nQualité : Réponse exacte, sourcée (fichier, ligne) quand elle porte sur le workspace, sans spéculation.\nLivrables : Réponse courte, ou délégation accompagnée de son résultat résumé.\nCollaboration : Tu peux déléguer, une tâche à la fois, à : architect, developer, documentalist. Un agent délégué ne redélègue pas (profondeur 1) : pour un travail en plusieurs étapes, demande à l'architecte un plan que l'utilisateur exécutera ensuite agent par agent.\n\nRègles communes (S2) :\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.\n\nIdentifiants de délégation (outil subagent, une tâche à la fois) : architect-delegue, developer-delegue, documentalist-delegue.",
+                                     "system":  "# Assistant\nMission : Point d'entrée par défaut : répondre aux questions courantes et orienter chaque demande vers l'agent adapté.\nExpertise : Explication de code et de configuration, usage de local-ai (`local-ai.ps1`, profils, agents), recherche dans le workspace, synthèse.\nMéthode : 1) Identifie le besoin réel ; pose une question seulement si la demande est ambiguë. 2) Réponds directement s'il s'agit d'une question simple ou d'une lecture. 3) Sinon, délègue à l'agent compétent et résume son résultat.\nLimites : Lecture seule : aucune modification de fichier, aucune commande.\nQualité : Réponse exacte, sourcée (fichier, ligne) quand elle porte sur le workspace, sans spéculation.\nLivrables : Réponse courte, ou délégation accompagnée de son résultat résumé.\nCollaboration : Tu peux déléguer, une tâche à la fois, à : architect, developer, documentalist. Un agent délégué ne redélègue pas (profondeur 1) : pour un travail en plusieurs étapes, demande à l'architecte un plan que l'utilisateur exécutera ensuite agent par agent.\n\nRègles communes (S2) :\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.\n\nDélégation automatique désactivée (V1). Pour confier une tâche à architect, developer, documentalist, termine ta réponse par une ligne « Transfert -> <agent> : <consigne autonome et complète> » ; l'utilisateur la lance lui-même (une tâche à la fois).",
                                      "permissions":  [
                                                          {
                                                              "action":  "*",
@@ -718,21 +904,6 @@
                                                              "effect":  "deny"
                                                          },
                                                          {
-                                                             "action":  "subagent",
-                                                             "resource":  "architect-delegue",
-                                                             "effect":  "ask"
-                                                         },
-                                                         {
-                                                             "action":  "subagent",
-                                                             "resource":  "developer-delegue",
-                                                             "effect":  "ask"
-                                                         },
-                                                         {
-                                                             "action":  "subagent",
-                                                             "resource":  "documentalist-delegue",
-                                                             "effect":  "ask"
-                                                         },
-                                                         {
                                                              "action":  "shell",
                                                              "resource":  "*git push*",
                                                              "effect":  "deny"
@@ -823,6 +994,111 @@
                                                              "effect":  "deny"
                                                          },
                                                          {
+                                                             "action":  "shell",
+                                                             "resource":  "*sh -c*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*bash -c*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*eval *",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*exec *",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*python* -c*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*perl -e*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*perl -E*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*node -e*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*node --eval*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*base64*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*xxd*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*openssl*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*/tui-tmp*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*:11434*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*ollama-engine*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*ollama-gate*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*:8080*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*local-ai-mcp*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*alias *",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*source *",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*/dev/tcp*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
                                                              "action":  "webfetch",
                                                              "resource":  "*",
                                                              "effect":  "deny"
@@ -903,7 +1179,7 @@
                                     "description":  "Debugger — Reproduit, diagnostique et corrige les anomalies.",
                                     "mode":  "all",
                                     "model":  "ollama/qwen2.5-coder:14b",
-                                    "system":  "# Debugger\nMission : Reproduire, diagnostiquer et corriger les anomalies, avec la correction la plus petite possible.\nExpertise : Analyse de traces et de journaux, bisection, shell, Python, PowerShell, Docker, tests de non-régression.\nMéthode : 1) Reproduis le défaut (commande, entrée, résultat attendu et obtenu). 2) Formule des hypothèses et vérifie-les une à une, en lecture d'abord. 3) Corrige la cause racine, pas le symptôme ; ajoute un test qui échouait avant la correction. 4) Vérifie la correction et l'absence de régression.\nLimites : Modifications et commandes soumises à validation (ask). Pas de refonte non demandée.\nQualité : Cause racine démontrée, correction minimale, test de non-régression.\nLivrables : Diagnostic (symptôme, cause, preuve), correctif, résultat du test.\nCollaboration : Tu peux déléguer à : qa (écriture du test de non-régression). Un agent délégué ne redélègue pas (profondeur 1).\n\nRègles communes (S2) :\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.\n\nIdentifiants de délégation (outil subagent, une tâche à la fois) : qa-delegue.",
+                                    "system":  "# Debugger\nMission : Reproduire, diagnostiquer et corriger les anomalies, avec la correction la plus petite possible.\nExpertise : Analyse de traces et de journaux, bisection, shell, Python, PowerShell, Docker, tests de non-régression.\nMéthode : 1) Reproduis le défaut (commande, entrée, résultat attendu et obtenu). 2) Formule des hypothèses et vérifie-les une à une, en lecture d'abord. 3) Corrige la cause racine, pas le symptôme ; ajoute un test qui échouait avant la correction. 4) Vérifie la correction et l'absence de régression.\nLimites : Modifications et commandes soumises à validation (ask). Pas de refonte non demandée.\nQualité : Cause racine démontrée, correction minimale, test de non-régression.\nLivrables : Diagnostic (symptôme, cause, preuve), correctif, résultat du test.\nCollaboration : Tu peux déléguer à : qa (écriture du test de non-régression). Un agent délégué ne redélègue pas (profondeur 1).\n\nRègles communes (S2) :\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.\n\nDélégation automatique désactivée (V1). Pour confier une tâche à qa, termine ta réponse par une ligne « Transfert -> <agent> : <consigne autonome et complète> » ; l'utilisateur la lance lui-même (une tâche à la fois).",
                                     "permissions":  [
                                                         {
                                                             "action":  "*",
@@ -1026,11 +1302,6 @@
                                                             "effect":  "deny"
                                                         },
                                                         {
-                                                            "action":  "subagent",
-                                                            "resource":  "qa-delegue",
-                                                            "effect":  "ask"
-                                                        },
-                                                        {
                                                             "action":  "shell",
                                                             "resource":  "*git push*",
                                                             "effect":  "deny"
@@ -1121,6 +1392,111 @@
                                                             "effect":  "deny"
                                                         },
                                                         {
+                                                            "action":  "shell",
+                                                            "resource":  "*sh -c*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*bash -c*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*eval *",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*exec *",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*python* -c*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*perl -e*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*perl -E*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*node -e*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*node --eval*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*base64*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*xxd*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*openssl*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*/tui-tmp*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*:11434*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*ollama-engine*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*ollama-gate*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*:8080*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*local-ai-mcp*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*alias *",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*source *",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*/dev/tcp*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
                                                             "action":  "webfetch",
                                                             "resource":  "*",
                                                             "effect":  "deny"
@@ -1201,7 +1577,7 @@
                                      "description":  "Développeur — Implémente les fonctionnalités demandées avec tests.",
                                      "mode":  "all",
                                      "model":  "ollama/qwen3-coder:30b",
-                                     "system":  "# Développeur\nMission : Implémenter les fonctionnalités demandées, avec leurs tests, dans le style du projet.\nExpertise : Python, TypeScript/JavaScript, shell, PowerShell, YAML, Docker ; conception simple, code lisible, tests unitaires.\nMéthode : 1) Lis le code existant concerné et ses conventions. 2) Annonce le plan de modification (fichiers, fonctions) avant d'écrire. 3) Implémente par petites étapes, avec tests ; exécute les tests. 4) Résume les changements et ce qui reste non vérifié.\nLimites : Modifications et commandes soumises à validation (ask). Aucune dépendance ajoutée ni téléchargement sans accord explicite.\nQualité : Code testé, sans duplication inutile, erreurs gérées, aucun secret en dur.\nLivrables : Modifications de code, tests, résultat d'exécution des tests.\nCollaboration : Tu peux déléguer à : qa (tests complémentaires), debugger (anomalie bloquante). Un agent délégué ne redélègue pas (profondeur 1).\n\nRègles communes (S2) :\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.\n\nIdentifiants de délégation (outil subagent, une tâche à la fois) : qa-delegue, debugger-delegue.",
+                                     "system":  "# Développeur\nMission : Implémenter les fonctionnalités demandées, avec leurs tests, dans le style du projet.\nExpertise : Python, TypeScript/JavaScript, shell, PowerShell, YAML, Docker ; conception simple, code lisible, tests unitaires.\nMéthode : 1) Lis le code existant concerné et ses conventions. 2) Annonce le plan de modification (fichiers, fonctions) avant d'écrire. 3) Implémente par petites étapes, avec tests ; exécute les tests. 4) Résume les changements et ce qui reste non vérifié.\nLimites : Modifications et commandes soumises à validation (ask). Aucune dépendance ajoutée ni téléchargement sans accord explicite.\nQualité : Code testé, sans duplication inutile, erreurs gérées, aucun secret en dur.\nLivrables : Modifications de code, tests, résultat d'exécution des tests.\nCollaboration : Tu peux déléguer à : qa (tests complémentaires), debugger (anomalie bloquante). Un agent délégué ne redélègue pas (profondeur 1).\n\nRègles communes (S2) :\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.\n\nDélégation automatique désactivée (V1). Pour confier une tâche à qa, debugger, termine ta réponse par une ligne « Transfert -> <agent> : <consigne autonome et complète> » ; l'utilisateur la lance lui-même (une tâche à la fois).",
                                      "permissions":  [
                                                          {
                                                              "action":  "*",
@@ -1324,16 +1700,6 @@
                                                              "effect":  "deny"
                                                          },
                                                          {
-                                                             "action":  "subagent",
-                                                             "resource":  "qa-delegue",
-                                                             "effect":  "ask"
-                                                         },
-                                                         {
-                                                             "action":  "subagent",
-                                                             "resource":  "debugger-delegue",
-                                                             "effect":  "ask"
-                                                         },
-                                                         {
                                                              "action":  "shell",
                                                              "resource":  "*git push*",
                                                              "effect":  "deny"
@@ -1424,6 +1790,111 @@
                                                              "effect":  "deny"
                                                          },
                                                          {
+                                                             "action":  "shell",
+                                                             "resource":  "*sh -c*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*bash -c*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*eval *",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*exec *",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*python* -c*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*perl -e*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*perl -E*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*node -e*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*node --eval*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*base64*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*xxd*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*openssl*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*/tui-tmp*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*:11434*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*ollama-engine*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*ollama-gate*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*:8080*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*local-ai-mcp*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*alias *",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*source *",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*/dev/tcp*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
                                                              "action":  "webfetch",
                                                              "resource":  "*",
                                                              "effect":  "deny"
@@ -1504,7 +1975,7 @@
                                   "description":  "DevOps — Gère Compose, CI, scripts et configuration d'exécution.",
                                   "mode":  "all",
                                   "model":  "ollama/qwen3-coder:30b",
-                                  "system":  "# DevOps\nMission : Gérer Compose, CI, scripts et configuration d'exécution de façon reproductible et sûre.\nExpertise : Docker et Compose (profils, réseaux internes, volumes, healthchecks), durcissement de conteneurs, PowerShell, Bash, CI, supervision.\nMéthode : 1) Lis la configuration actuelle et les ADR applicables. 2) Propose une modification minimale et réversible, avec son retour arrière. 3) Valide (`docker compose config`, `local-ai.ps1 config`) avant toute application.\nLimites : Modifications et commandes soumises à validation (ask). Interdits : socket Docker, `privileged`, `network_mode: host`, ports hors 127.0.0.1, images non épinglées (nom:version@sha256), téléchargements implicites.\nQualité : Configuration validée, idempotente, documentée, compatible avec les profils B, N1 et S2.\nLivrables : Changements de configuration ou de scripts, commandes de validation et leur résultat, procédure de retour arrière.\nCollaboration : Tu peux déléguer à : security (revue d'un changement sensible). Un agent délégué ne redélègue pas (profondeur 1).\n\nRègles communes (S2) :\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.\n\nIdentifiants de délégation (outil subagent, une tâche à la fois) : security-delegue.",
+                                  "system":  "# DevOps\nMission : Gérer Compose, CI, scripts et configuration d'exécution de façon reproductible et sûre.\nExpertise : Docker et Compose (profils, réseaux internes, volumes, healthchecks), durcissement de conteneurs, PowerShell, Bash, CI, supervision.\nMéthode : 1) Lis la configuration actuelle et les ADR applicables. 2) Propose une modification minimale et réversible, avec son retour arrière. 3) Valide (`docker compose config`, `local-ai.ps1 config`) avant toute application.\nLimites : Modifications et commandes soumises à validation (ask). Interdits : socket Docker, `privileged`, `network_mode: host`, ports hors 127.0.0.1, images non épinglées (nom:version@sha256), téléchargements implicites.\nQualité : Configuration validée, idempotente, documentée, compatible avec les profils B, N1 et S2.\nLivrables : Changements de configuration ou de scripts, commandes de validation et leur résultat, procédure de retour arrière.\nCollaboration : Tu peux déléguer à : security (revue d'un changement sensible). Un agent délégué ne redélègue pas (profondeur 1).\n\nRègles communes (S2) :\n- Lecture et analyse libres dans le workspace ; toute modification ou commande est soumise à validation lorsque tes permissions le prévoient.\n- Interdits : réseau et Internet, `secrets/` et fichiers `*.env`, chemins hors workspace, `git push`, `sudo`, suppression non demandée.\n- N'invente jamais une version, une API, un résultat de test ou une sortie de commande : dis ce que tu as vérifié et ce qui reste à vérifier.\n- Un seul modèle tourne à la fois sur CPU : sois économe (lectures ciblées, réponses courtes, pas de répétitions).\n- Réponds en français, de façon structurée et concise.\n\nDélégation automatique désactivée (V1). Pour confier une tâche à security, termine ta réponse par une ligne « Transfert -> <agent> : <consigne autonome et complète> » ; l'utilisateur la lance lui-même (une tâche à la fois).",
                                   "permissions":  [
                                                       {
                                                           "action":  "*",
@@ -1627,11 +2098,6 @@
                                                           "effect":  "deny"
                                                       },
                                                       {
-                                                          "action":  "subagent",
-                                                          "resource":  "security-delegue",
-                                                          "effect":  "ask"
-                                                      },
-                                                      {
                                                           "action":  "shell",
                                                           "resource":  "*git push*",
                                                           "effect":  "deny"
@@ -1719,6 +2185,111 @@
                                                       {
                                                           "action":  "shell",
                                                           "resource":  "*docker*",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "*sh -c*",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "*bash -c*",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "*eval *",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "*exec *",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "*python* -c*",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "*perl -e*",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "*perl -E*",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "*node -e*",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "*node --eval*",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "*base64*",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "*xxd*",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "*openssl*",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "*/tui-tmp*",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "*:11434*",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "*ollama-engine*",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "*ollama-gate*",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "*:8080*",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "*local-ai-mcp*",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "*alias *",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "*source *",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "*/dev/tcp*",
                                                           "effect":  "deny"
                                                       },
                                                       {
@@ -2007,6 +2578,111 @@
                                                              {
                                                                  "action":  "shell",
                                                                  "resource":  "*docker*",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "*sh -c*",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "*bash -c*",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "*eval *",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "*exec *",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "*python* -c*",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "*perl -e*",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "*perl -E*",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "*node -e*",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "*node --eval*",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "*base64*",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "*xxd*",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "*openssl*",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "*/tui-tmp*",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "*:11434*",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "*ollama-engine*",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "*ollama-gate*",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "*:8080*",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "*local-ai-mcp*",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "*alias *",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "*source *",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "*/dev/tcp*",
                                                                  "effect":  "deny"
                                                              },
                                                              {
@@ -2333,6 +3009,111 @@
                                                       "effect":  "deny"
                                                   },
                                                   {
+                                                      "action":  "shell",
+                                                      "resource":  "*sh -c*",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "*bash -c*",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "*eval *",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "*exec *",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "*python* -c*",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "*perl -e*",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "*perl -E*",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "*node -e*",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "*node --eval*",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "*base64*",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "*xxd*",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "*openssl*",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "*/tui-tmp*",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "*:11434*",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "*ollama-engine*",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "*ollama-gate*",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "*:8080*",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "*local-ai-mcp*",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "*alias *",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "*source *",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "*/dev/tcp*",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
                                                       "action":  "webfetch",
                                                       "resource":  "*",
                                                       "effect":  "deny"
@@ -2613,6 +3394,111 @@
                                                         {
                                                             "action":  "shell",
                                                             "resource":  "*docker*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*sh -c*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*bash -c*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*eval *",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*exec *",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*python* -c*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*perl -e*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*perl -E*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*node -e*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*node --eval*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*base64*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*xxd*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*openssl*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*/tui-tmp*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*:11434*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*ollama-engine*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*ollama-gate*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*:8080*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*local-ai-mcp*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*alias *",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*source *",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*/dev/tcp*",
                                                             "effect":  "deny"
                                                         },
                                                         {
@@ -2899,6 +3785,111 @@
                                                             "effect":  "deny"
                                                         },
                                                         {
+                                                            "action":  "shell",
+                                                            "resource":  "*sh -c*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*bash -c*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*eval *",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*exec *",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*python* -c*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*perl -e*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*perl -E*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*node -e*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*node --eval*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*base64*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*xxd*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*openssl*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*/tui-tmp*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*:11434*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*ollama-engine*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*ollama-gate*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*:8080*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*local-ai-mcp*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*alias *",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*source *",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*/dev/tcp*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
                                                             "action":  "webfetch",
                                                             "resource":  "*",
                                                             "effect":  "deny"
@@ -3180,6 +4171,111 @@
                                                                  {
                                                                      "action":  "shell",
                                                                      "resource":  "*docker*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*sh -c*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*bash -c*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*eval *",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*exec *",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*python* -c*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*perl -e*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*perl -E*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*node -e*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*node --eval*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*base64*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*xxd*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*openssl*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*/tui-tmp*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*:11434*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*ollama-engine*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*ollama-gate*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*:8080*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*local-ai-mcp*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*alias *",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*source *",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*/dev/tcp*",
                                                                      "effect":  "deny"
                                                                  },
                                                                  {
@@ -3477,6 +4573,111 @@
                                                                     "effect":  "deny"
                                                                 },
                                                                 {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*sh -c*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*bash -c*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*eval *",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*exec *",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*python* -c*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*perl -e*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*perl -E*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*node -e*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*node --eval*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*base64*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*xxd*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*openssl*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*/tui-tmp*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*:11434*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*ollama-engine*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*ollama-gate*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*:8080*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*local-ai-mcp*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*alias *",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*source *",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*/dev/tcp*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
                                                                     "action":  "webfetch",
                                                                     "resource":  "*",
                                                                     "effect":  "deny"
@@ -3768,6 +4969,111 @@
                                                                  {
                                                                      "action":  "shell",
                                                                      "resource":  "*docker*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*sh -c*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*bash -c*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*eval *",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*exec *",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*python* -c*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*perl -e*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*perl -E*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*node -e*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*node --eval*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*base64*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*xxd*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*openssl*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*/tui-tmp*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*:11434*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*ollama-engine*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*ollama-gate*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*:8080*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*local-ai-mcp*",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*alias *",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*source *",
+                                                                     "effect":  "deny"
+                                                                 },
+                                                                 {
+                                                                     "action":  "shell",
+                                                                     "resource":  "*/dev/tcp*",
                                                                      "effect":  "deny"
                                                                  },
                                                                  {
@@ -4065,6 +5371,111 @@
                                                                   "effect":  "deny"
                                                               },
                                                               {
+                                                                  "action":  "shell",
+                                                                  "resource":  "*sh -c*",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "*bash -c*",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "*eval *",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "*exec *",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "*python* -c*",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "*perl -e*",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "*perl -E*",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "*node -e*",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "*node --eval*",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "*base64*",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "*xxd*",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "*openssl*",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "*/tui-tmp*",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "*:11434*",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "*ollama-engine*",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "*ollama-gate*",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "*:8080*",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "*local-ai-mcp*",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "*alias *",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "*source *",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
+                                                                  "action":  "shell",
+                                                                  "resource":  "*/dev/tcp*",
+                                                                  "effect":  "deny"
+                                                              },
+                                                              {
                                                                   "action":  "webfetch",
                                                                   "resource":  "*",
                                                                   "effect":  "deny"
@@ -4351,6 +5762,111 @@
                                                                      {
                                                                          "action":  "shell",
                                                                          "resource":  "*docker*",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "*sh -c*",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "*bash -c*",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "*eval *",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "*exec *",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "*python* -c*",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "*perl -e*",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "*perl -E*",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "*node -e*",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "*node --eval*",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "*base64*",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "*xxd*",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "*openssl*",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "*/tui-tmp*",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "*:11434*",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "*ollama-engine*",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "*ollama-gate*",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "*:8080*",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "*local-ai-mcp*",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "*alias *",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "*source *",
+                                                                         "effect":  "deny"
+                                                                     },
+                                                                     {
+                                                                         "action":  "shell",
+                                                                         "resource":  "*/dev/tcp*",
                                                                          "effect":  "deny"
                                                                      },
                                                                      {
@@ -4678,6 +6194,111 @@
                                                               "effect":  "deny"
                                                           },
                                                           {
+                                                              "action":  "shell",
+                                                              "resource":  "*sh -c*",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "*bash -c*",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "*eval *",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "*exec *",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "*python* -c*",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "*perl -e*",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "*perl -E*",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "*node -e*",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "*node --eval*",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "*base64*",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "*xxd*",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "*openssl*",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "*/tui-tmp*",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "*:11434*",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "*ollama-engine*",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "*ollama-gate*",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "*:8080*",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "*local-ai-mcp*",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "*alias *",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "*source *",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
+                                                              "action":  "shell",
+                                                              "resource":  "*/dev/tcp*",
+                                                              "effect":  "deny"
+                                                          },
+                                                          {
                                                               "action":  "webfetch",
                                                               "resource":  "*",
                                                               "effect":  "deny"
@@ -4962,6 +6583,111 @@
                                                                     "effect":  "deny"
                                                                 },
                                                                 {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*sh -c*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*bash -c*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*eval *",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*exec *",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*python* -c*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*perl -e*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*perl -E*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*node -e*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*node --eval*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*base64*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*xxd*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*openssl*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*/tui-tmp*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*:11434*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*ollama-engine*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*ollama-gate*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*:8080*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*local-ai-mcp*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*alias *",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*source *",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*/dev/tcp*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
                                                                     "action":  "webfetch",
                                                                     "resource":  "*",
                                                                     "effect":  "deny"
@@ -5243,6 +6969,111 @@
                                                                 {
                                                                     "action":  "shell",
                                                                     "resource":  "*docker*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*sh -c*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*bash -c*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*eval *",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*exec *",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*python* -c*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*perl -e*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*perl -E*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*node -e*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*node --eval*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*base64*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*xxd*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*openssl*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*/tui-tmp*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*:11434*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*ollama-engine*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*ollama-gate*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*:8080*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*local-ai-mcp*",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*alias *",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*source *",
+                                                                    "effect":  "deny"
+                                                                },
+                                                                {
+                                                                    "action":  "shell",
+                                                                    "resource":  "*/dev/tcp*",
                                                                     "effect":  "deny"
                                                                 },
                                                                 {

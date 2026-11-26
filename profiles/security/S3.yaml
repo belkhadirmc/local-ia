@@ -10,6 +10,7 @@ permissions:
   network: ask
   mcp: ask
   delegation: allow
+  delegation_mode: manual   # 14.B.1 (R12) : transfert manuel (local-ai.ps1 agent handoff) ; « auto » = outil subagent
 always_ask:
   - "suppression de fichiers"
   - "git push"

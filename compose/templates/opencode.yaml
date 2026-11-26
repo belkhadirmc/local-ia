@@ -122,6 +122,11 @@ services:
         source: ../../config/opencode/opencode.json
         target: /etc/opencode/opencode.json
         read_only: true
+      # 14.B.1 (R14) : shell des agents sans OPENCODE_PASSWORD (clé « shell » d'opencode.json)
+      - type: bind
+        source: ../../config/opencode/agent-shell.sh
+        target: /etc/local-ai/agent-shell
+        read_only: true
     read_only: true
     tmpfs:
       - /tmp:size=256m,uid=1000,gid=1000,mode=0700

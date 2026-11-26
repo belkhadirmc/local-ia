@@ -44,6 +44,9 @@ foreach ($b in ([regex]::Split($reg, '(?m)^\s*-\s+id:\s*') | Select-Object -Skip
 $defaults = [IO.File]::ReadAllText((Join-Path $Root 'profiles\defaults.yaml'), $Utf8)
 $SecProfile = [regex]::Match($defaults, '(?ms)^desired:.*?^\s+security:\s*(S[1-4])').Groups[1].Value
 if (-not $SecProfile) { $SecProfile = 'S2' }
+# 14.B.1 (R12) : mode de délégation du profil actif (manual | auto) ; manual par défaut en V1.
+$DelegationMode = [regex]::Match([IO.File]::ReadAllText((Join-Path $Root "profiles\security\$SecProfile.yaml"), $Utf8), '(?m)^\s*delegation_mode:\s*(manual|auto)').Groups[1].Value
+if (-not $DelegationMode) { $DelegationMode = 'manual' }
 # Effet appliqué à une capacité prévue par la définition (jamais d'élargissement d'une capacité refusée par la définition).
 function Get-Effect([string]$Kind, [string]$DefEffect) {
     if ($DefEffect -eq 'deny') { return 'deny' }
@@ -66,6 +69,10 @@ function Get-Grants([string]$AgentId) { foreach ($g in $GrantRules) { if ($g.age
 # Refus techniques prioritaires (ajoutés en dernier : « la dernière règle correspondante l'emporte »).
 $HardDeny = @()
 foreach ($p in '*git push*', '*sudo*', '*curl*', '*wget*', 'nc *', '* nc *', '*ssh *', '*scp *', '*/proc/*', '*environ*', '*OPENCODE_PASSWORD*', '*opencode api*', '*opencode run*', '*opencode serve*', '*:4096*', '*mcp-relay*', '*mcp-egress*', '*docker*') { $HardDeny += Rule 'shell' $p 'deny' }
+# 14.B.1 (R14/R15/R17) : code en ligne et contournements usuels des motifs, exécution depuis le tmpfs exécutable du TUI,
+# accès direct au moteur / à la passerelle d'inférence et aux relais MCP. Ne remplace pas la validation humaine (R15).
+foreach ($p in '*sh -c*', '*bash -c*', '*eval *', '*exec *', '*python* -c*', '*perl -e*', '*perl -E*', '*node -e*', '*node --eval*', '*base64*', '*xxd*', '*openssl*',
+               '*/tui-tmp*', '*:11434*', '*ollama-engine*', '*ollama-gate*', '*:8080*', '*local-ai-mcp*', '*alias *', '*source *', '*/dev/tcp*') { $HardDeny += Rule 'shell' $p 'deny' }
 foreach ($a in 'webfetch', 'websearch', 'external_directory') { $HardDeny += Rule $a '*' 'deny' }
 foreach ($a in 'read', 'edit') { foreach ($p in '*.env', '*.env.*', '*secrets*', '/proc/*', '*/proc/*', '/etc/opencode/*') { $HardDeny += Rule $a $p 'deny' } }
 # MCP activés : registre (enabled: true, activation réelle) ou relais témoin local en cours (runtime/mcp/<id>/witness).
@@ -115,11 +122,15 @@ foreach ($f in (Get-ChildItem (Join-Path $Root 'agents\definitions') -Filter *.y
     $rules.Add((Rule 'subagent' '*' 'deny'))
     foreach ($g in (Get-Grants $id)) { $rules.Add($g) }
     $base = @($rules.ToArray()) + $HardDeny
-    foreach ($d in $deleg) { $rules.Add((Rule 'subagent' "$d$DelegSuffix" (Get-Effect 'delegation' 'allow'))) }
+    # 14.B.1 (R12) : délégation automatique instable sur CPU (réponse vide du modèle, cibles bloquées par la garde RAM) ->
+    # mode « manual » du profil : aucune règle subagent (refus de base), l'agent rédige un transfert que l'utilisateur lance
+    # (local-ai.ps1 agent handoff). Mode « auto » : délégation validée (S2) vers les variantes <agent>-delegue.
+    if ($DelegationMode -ne 'manual') { foreach ($d in $deleg) { $rules.Add((Rule 'subagent' "$d$DelegSuffix" (Get-Effect 'delegation' 'allow'))) } }
     foreach ($h in $HardDeny) { $rules.Add($h) }
     $label = "$(Get-Val $t 'name') — $(Get-Val $t 'role')"
     $sys = $prompt
-    if ($deleg.Count) { $sys += "`n`nIdentifiants de délégation (outil subagent, une tâche à la fois) : " + (($deleg | ForEach-Object { "$_$DelegSuffix" }) -join ', ') + '.' }
+    if ($deleg.Count -and $DelegationMode -eq 'manual') { $sys += "`n`nDélégation automatique désactivée (V1). Pour confier une tâche à " + ($deleg -join ', ') + ", termine ta réponse par une ligne « Transfert -> <agent> : <consigne autonome et complète> » ; l'utilisateur la lance lui-même (une tâche à la fois)." }
+    elseif ($deleg.Count) { $sys += "`n`nIdentifiants de délégation (outil subagent, une tâche à la fois) : " + (($deleg | ForEach-Object { "$_$DelegSuffix" }) -join ', ') + '.' }
     $agents[$id] = [ordered]@{ description = $label; mode = 'all'; model = "ollama/$($idToTag[$ref])"; system = $sys; permissions = $rules.ToArray() }
     # Variante déléguée (profondeur 1 imposée : aucune délégation possible), cachée, même modèle et mêmes permissions de base.
     $subs[$id] = [ordered]@{ description = "$label (agent délégué, ne délègue pas)"; mode = 'subagent'; hidden = $true; model = "ollama/$($idToTag[$ref])"
@@ -146,6 +157,7 @@ $cfg = [ordered]@{
     '$schema'     = 'https://opencode.ai/config.json'
     model         = "ollama/$($idToTag['qwen3.5-4b'])"
     default_agent = 'assistant'
+    shell         = '/etc/local-ai/agent-shell'   # 14.B.1 (R14) : commandes d'agent sans OPENCODE_PASSWORD
     update        = 'disable'
     share         = 'disabled'
     websearch     = $false

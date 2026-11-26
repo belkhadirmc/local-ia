@@ -4,6 +4,27 @@
 $MonDir = Join-Path $Root 'runtime\monitor'
 $MonState = Join-Path $Root 'runtime\state\monitor.json'
 
+function Get-SentinelPid {
+    $pf = Join-Path $Root 'runtime\state\sentinel.pid'; if (-not (Test-Path $pf)) { return $null }
+    try { $p = [int]([IO.File]::ReadAllText($pf).Trim()) } catch { return $null }   # fichier retiré entre-temps par la sentinelle
+    $proc = Get-Process -Id $p -ErrorAction SilentlyContinue
+    if ($proc -and $proc.ProcessName -match 'powershell') { $p } else { $null }
+}
+function Start-Sentinel {
+    # Processus PowerShell caché, léger (1 requête CIM / 2 s), sans privilège ; idempotent.
+    New-Item -ItemType Directory -Force (Join-Path $Root 'runtime\state') | Out-Null
+    if (Get-SentinelPid) { return }
+    $s = Join-Path $Root 'scripts\monitor\sentinel.ps1'
+    Start-Process -WindowStyle Hidden -FilePath 'powershell.exe' -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$s`"") | Out-Null
+    for ($i = 0; $i -lt 20 -and -not (Test-Path (Join-Path $Root 'runtime\state\host-ram.json')); $i++) { Start-Sleep -Milliseconds 300 }
+}
+function Stop-Sentinel {
+    $st = Join-Path $Root 'runtime\state'; if (-not (Test-Path $st)) { return }
+    [IO.File]::WriteAllText((Join-Path $st 'sentinel.stop'), (Get-Date).ToString('s'))
+    for ($i = 0; $i -lt 15 -and (Get-SentinelPid); $i++) { Start-Sleep -Milliseconds 400 }
+    $p = Get-SentinelPid; if ($p) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue }
+    Remove-Item (Join-Path $st 'host-ram.json') -ErrorAction SilentlyContinue
+}
 function Get-Thresholds {
     $t = [IO.File]::ReadAllText((Join-Path $Root 'config\monitoring\thresholds.yaml'))
     $n = { param($sec, $k) [double]([regex]::Match($t, "(?m)^$sec\s*:\s*\n(?:\s+\S.*\n)*?\s+$k\s*:\s*([\d.]+)")).Groups[1].Value }

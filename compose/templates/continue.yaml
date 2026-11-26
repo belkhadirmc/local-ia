@@ -77,13 +77,17 @@ services:
     command: []
     environment:
       RELAY_MODEL: "qwen2.5-coder:1.5b"
-      RELAY_UPSTREAM: "ollama:11434"
+      RELAY_UPSTREAM: "ollama:11434"   # 14.B.1 : « ollama » = passerelle d'inférence (verrou commun, RAM)
       RELAY_KEEP_ALIVE: "120"
     network_mode: "service:continue-net"
     volumes:
       - type: bind
         source: ../../config/continue/relay.pl
         target: /etc/local-ai/relay.pl
+        read_only: true
+      - type: bind
+        source: ../../config/gate/LocalAiJson.pm
+        target: /etc/local-ai/LocalAiJson.pm
         read_only: true
     read_only: true
     cap_drop: [ALL]
