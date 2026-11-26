@@ -1,7 +1,7 @@
 # Registre des modèles — téléchargés et testés hors ligne en 5.B.1 (2026-11-25).
 # digest = sha256 du manifeste officiel (registry.ollama.ai), vérifié localement (manifests-v2) ; id = 12 premiers caractères.
 # size_gib = somme des couches déclarées par le manifeste. Test : contexte 2048, réponse courte, keep_alive 0, CPU, réseau N1.
-# Affectations aux agents NON confirmées : à confirmer après benchmarks (models/benchmarks/).
+# Affectations aux agents NON modifiées : recommandations issues des benchmarks 6.B.1 dans models/benchmarks/report.md (best_for = rôle où le modèle est 1er).
 schema: local-ai/models/v1
 runtime: ollama
 runtime_image: "ollama/ollama:0.40.18@sha256:4e0d5daa6c5cd91e27011977031466844c5ea4ba2393b35e78068835edec040b"
@@ -27,6 +27,7 @@ models:
     offline_test: PASS
     test: {load_s: 4.6, total_s: 5.1, tok_per_s: 30.4, max_vm_used_gib: 1.54}
     fits_profile_B: true
+    benchmark: {run: "20261125_212627", score: 49.9, code: 31, reasoning: 39, instructions: 83, tools: 0, out_tps: 21.51, ttft_warm_s: 0.29, peak_wsl_pct_4096: 10.7, peak_wsl_pct_8192: 12.6, ctx_4096: validé, ctx_8192: validé, best_for: "documentalist, autocomplete"}
   - id: qwen3.5-4b
     tag: qwen3.5:4b-q4_K_M
     usage: "assistant généraliste léger"
@@ -38,6 +39,7 @@ models:
     offline_test: PASS
     test: {load_s: 7.4, total_s: 8.5, tok_per_s: 9.8, max_vm_used_gib: 3.83, think: false}
     fits_profile_B: true
+    benchmark: {run: "20261125_212627", score: 79.8, code: 83, reasoning: 86, instructions: 100, tools: 100, out_tps: 7.42, ttft_warm_s: 1.21, peak_wsl_pct_4096: 27.6, peak_wsl_pct_8192: 27.5, ctx_4096: validé, ctx_8192: validé, best_for: "assistant, debugger, developer"}
   - id: qwen2.5-coder-7b
     tag: qwen2.5-coder:7b
     usage: "tests et QA"
@@ -49,6 +51,7 @@ models:
     offline_test: PASS
     test: {load_s: 12.4, total_s: 14.7, tok_per_s: 7.6, max_vm_used_gib: 5.48}
     fits_profile_B: true
+    benchmark: {run: "20261125_212627", score: 59.9, code: 64, reasoning: 89, instructions: 92, tools: 0, out_tps: 5.12, ttft_warm_s: 1.61, peak_wsl_pct_4096: 27.7, peak_wsl_pct_8192: 28.9, ctx_4096: validé, ctx_8192: validé, best_for: ""}
   - id: qwen3.5-9b
     tag: qwen3.5:9b-q4_K_M
     usage: documentation
@@ -60,6 +63,7 @@ models:
     offline_test: PASS
     test: {load_s: 15.8, total_s: 17.8, tok_per_s: 6.4, max_vm_used_gib: 7.39, think: false}
     fits_profile_B: true
+    benchmark: {run: "20261125_212627", score: 60.2, code: 45, reasoning: 88, instructions: 100, tools: 100, out_tps: 3.16, ttft_warm_s: 2.45, peak_wsl_pct_4096: 40.7, peak_wsl_pct_8192: 40.5, ctx_4096: validé, ctx_8192: validé, best_for: ""}
   - id: qwen2.5-coder-14b
     tag: qwen2.5-coder:14b
     usage: "débogage"
@@ -71,6 +75,7 @@ models:
     offline_test: PASS
     test: {load_s: 26.8, total_s: 31.5, tok_per_s: 5.3, max_vm_used_gib: 9.82}
     fits_profile_B: true
+    benchmark: {run: "20261126_100232", score: 61.8, code: 78, reasoning: 94, instructions: 100, tools: 0, out_tps: 2.55, ttft_warm_s: 3.32, peak_wsl_pct_4096: 50.4, peak_wsl_pct_8192: 53.9, ctx_4096: validé, ctx_8192: validé, best_for: ""}
   - id: gpt-oss-20b
     tag: gpt-oss:20b
     usage: "raisonnement, architecture, revue, sécurité"
@@ -82,6 +87,7 @@ models:
     offline_test: PASS
     test: {load_s: 22.8, total_s: 29.1, tok_per_s: 6.8, max_vm_used_gib: 14.04, think: low}
     fits_profile_B: true
+    benchmark: {run: "20261126_100232", score: 61.8, code: 50, reasoning: 98, instructions: 100, tools: 100, out_tps: 6.22, ttft_warm_s: 3.89, peak_wsl_pct_4096: 61.6, peak_wsl_pct_8192: 61.8, ctx_4096: validé, ctx_8192: validé, best_for: "security, devops"}
   - id: qwen3-coder-30b
     tag: qwen3-coder:30b
     usage: "génération de code, DevOps"
@@ -93,4 +99,5 @@ models:
     offline_test: PASS
     test: {load_s: 34.8, total_s: 35.6, tok_per_s: 17.0, max_vm_used_gib: 18.53}
     fits_profile_B: "true (contexte 2048 testé ; 8192 à valider : 78,9 % de RAM WSL2 au test)"
+    benchmark: {run: "20261126_100232", score: 62.5, code: 78, reasoning: 100, instructions: 94, tools: 0, out_tps: 8.11, ttft_warm_s: 1.14, peak_wsl_pct_4096: 83.1, peak_wsl_pct_8192: 84.6, ctx_4096: validé, ctx_8192: validé, best_for: "qa, reviewer, architect"}
     note: "config blob : taille déclarée 539 o, réelle 542 o (contenu conforme à son digest) — écart du manifeste amont"

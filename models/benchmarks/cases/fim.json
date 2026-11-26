@@ -1,0 +1,12 @@
+{
+    "id":  "fim",
+    "category":  "code",
+    "kind":  "fim",
+    "validation":  "executed",
+    "requires_capability":  "insert",
+    "expected_tests":  4,
+    "num_predict":  64,
+    "prefix":  "max_of() {\n  # prints the largest integer argument\n  local m=$1; shift\n  for x in \"$@\"; do\n",
+    "suffix":  "  done\n  echo \"$m\"\n}\n",
+    "tests":  "t(){ if [ \"$2\" == \"$3\" ]; then echo \"PASS $1\"; else echo \"FAIL $1\"; fi; }\nt f1 9 \"$(max_of 3 9 2)\"\nt f2 -1 \"$(max_of -1 -5)\"\nt f3 7 \"$(max_of 7)\"\nt f4 10 \"$(max_of 1 2 3 10)\""
+}

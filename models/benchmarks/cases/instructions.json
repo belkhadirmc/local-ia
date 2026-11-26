@@ -1,0 +1,51 @@
+{
+    "id":  "instructions",
+    "category":  "instructions",
+    "kind":  "static",
+    "validation":  "static",
+    "prompt":  "Return ONLY a JSON object (no markdown, no code fence, no text before or after) with exactly these keys and no others: \"name\" = the string local-ai, \"version\" = the integer 3, \"tags\" = an array of exactly three lowercase strings chosen from [docker, ollama, agents, cpu], sorted alphabetically.",
+    "checks":  [
+                   {
+                       "name":  "raw_json_only",
+                       "type":  "regex",
+                       "pattern":  "^\\s*\\{[\\s\\S]*\\}\\s*$"
+                   },
+                   {
+                       "name":  "json_parses",
+                       "type":  "json_parse"
+                   },
+                   {
+                       "name":  "keys_exact",
+                       "type":  "json_keys_exact",
+                       "keys":  [
+                                    "name",
+                                    "version",
+                                    "tags"
+                                ]
+                   },
+                   {
+                       "name":  "name_value",
+                       "type":  "json_eq",
+                       "key":  "name",
+                       "value":  "local-ai"
+                   },
+                   {
+                       "name":  "version_integer_3",
+                       "type":  "json_int",
+                       "key":  "version",
+                       "value":  3
+                   },
+                   {
+                       "name":  "tags_valid_sorted",
+                       "type":  "json_tags",
+                       "key":  "tags",
+                       "length":  3,
+                       "allowed":  [
+                                       "docker",
+                                       "ollama",
+                                       "agents",
+                                       "cpu"
+                                   ]
+                   }
+               ]
+}

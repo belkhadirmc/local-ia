@@ -1,0 +1,10 @@
+{
+    "id":  "debug",
+    "category":  "code",
+    "kind":  "exec",
+    "validation":  "executed",
+    "eval_gen":  true,
+    "expected_tests":  5,
+    "prompt":  "The following bash function has bugs. Expected behaviour: sum_col FILE COL prints the sum of the integer values in column COL (1-based) of the comma-separated FILE, skipping the first (header) line. The last line of the file may not end with a newline.\nReturn the corrected function in a single ```bash code block, no explanations.\n\n```bash\nsum_col() {\n  local file=$1 col=$2 total=0\n  while IFS=, read -r -a f; do\n    total=$((total + f[$col]))\n  done \u003c \"$file\"\n  echo $total\n}\n```",
+    "tests":  "printf \u0027a,b,c\\n1,2,3\\n4,5,6\\n7,8,9\u0027 \u003e /tmp/t1.csv\nprintf \u0027x,y\\n10,20\\n30,40\\n\u0027 \u003e /tmp/t2.csv\nt(){ if [ \"$2\" == \"$3\" ]; then echo \"PASS $1\"; else echo \"FAIL $1\"; fi; }\nt d1 15 \"$(sum_col /tmp/t1.csv 2)\"\nt d2 12 \"$(sum_col /tmp/t1.csv 1)\"\nt d3 18 \"$(sum_col /tmp/t1.csv 3)\"\nt d4 60 \"$(sum_col /tmp/t2.csv 2)\"\nt d5 40 \"$(sum_col /tmp/t2.csv 1)\""
+}

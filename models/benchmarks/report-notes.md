@@ -1,0 +1,9 @@
+## Constats (lecture des résultats bruts)
+
+- **Exécution `20261125_212627`** : mise en veille de Windows (23:28 → 09:30) pendant le contexte long de qwen2.5-coder:14b (délai dépassé) ; après réveil, interruption sécurisée (RAM Windows disponible < 4 Gio) de gpt-oss:20b (contexte long) et qwen3-coder:30b (vitesse). Ces 3 modèles ont été relancés intégralement ; le script bloque désormais la mise en veille pendant l'exécution (propre au processus, aucun réglage système).
+- **RAM Windows disponible** : minimum 4,35–4,42 Gio pendant qwen3.5:9b, gpt-oss:20b et qwen3-coder:30b, soit juste au-dessus du seuil d'interruption (4 Gio). Cause : le cache de pages de WSL2 (lecture des fichiers modèles), non compté dans la RAM WSL2 « hors cache » mais retenu par la VM ; il est rendu à Windows en 1 à 3 min au repos (voir restitution). Cache non vidé, conformément à la consigne.
+- **qwen3-coder:30b à 8192** : validé, pic 84,6 % de RAM WSL2 hors cache (seuil d'alerte 85 %) ; marge quasi nulle, aucun autre modèle ni charge concurrente possible.
+- **Appels d'outils qwen3-coder:30b = 0** : le modèle produit le bon appel (`<function=run_tests>…`) mais sans balise ouvrante `<tool_call>` ; Ollama 0.40.18 ne l'extrait donc pas en `tool_calls`. Inutilisable tel quel par un agent via l'API (critère inchangé). qwen2.5-coder (1.5b à 14b) écrit l'appel en JSON dans le texte : même verdict.
+- **Échecs exécutés notables** : gpt-oss:20b debug (lit l'en-tête sur stdin au lieu du fichier) et qa (test faux : `clamp -5 -10 -3` attendu à -3) ; debug est l'exercice le plus discriminant (meilleur résultat 60 %).
+- **Exercice documentation saturé** (6/7 modèles à 100 %) : le classement Documentaliste est alors dominé par la vitesse, d'où qwen2.5-coder:1.5b en tête malgré des instructions à 67 %. À interpréter avec prudence.
+- **Notation fusionnée** : la mémoire est normalisée sur la base de l'exécution `20261126_100232` (1,38 Gio) ; écart < 0,5 point pour les modèles repris.

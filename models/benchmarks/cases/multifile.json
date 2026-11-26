@@ -1,0 +1,29 @@
+{
+    "id":  "multifile",
+    "category":  "reasoning",
+    "kind":  "static",
+    "validation":  "static",
+    "prompt":  "Three files of a Python project:\n\n--- config.py ---\nTIMEOUT_S = 30\nRETRIES = 3\nBASE_URL = \"http://api.internal\"\n\n--- utils.py ---\ndef build_url(base, path):\n    return base.rstrip(\"/\") + \"/\" + path.lstrip(\"/\")\n\n--- client.py ---\nimport config\nfrom utils import build_url\n\ndef fetch(path, http):\n    url = build_url(config.BASE_URL, path)\n    for attempt in range(config.RETRIES):\n        resp = http.get(url, timeout=config.TIMEOUT_MS / 1000)\n        if resp.ok:\n            return resp.json()\n    raise RuntimeError(\"failed\")\n\nQuestion: which line will raise an exception at runtime, in which file, and why? Also state the maximum number of HTTP attempts fetch makes. Answer in at most 3 sentences.",
+    "checks":  [
+                   {
+                       "name":  "file_client",
+                       "type":  "regex",
+                       "pattern":  "(?i)client\\.py"
+                   },
+                   {
+                       "name":  "attribute_timeout_ms",
+                       "type":  "regex",
+                       "pattern":  "TIMEOUT_MS"
+                   },
+                   {
+                       "name":  "reason_missing_attribute",
+                       "type":  "regex",
+                       "pattern":  "(?i)AttributeError|not defined|does not exist|doesn\u0027t exist|no attribute|undefined|missing"
+                   },
+                   {
+                       "name":  "attempts_3",
+                       "type":  "regex",
+                       "pattern":  "(?i)\\b3\\b|three"
+                   }
+               ]
+}

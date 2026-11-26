@@ -1,0 +1,131 @@
+# Suite de benchmarks local-ai — 6.B.1. Critères définis AVANT exécution ; mêmes exercices pour tous les modèles.
+# Lu par run-benchmarks.ps1 (cartes imbriquées de scalaires uniquement). Cas détaillés : cases/*.json.
+suite_version: 1
+
+runtime:
+  api: "http://127.0.0.1:11434 (interne au conteneur ollama, réseau local-ai-core / N1)"
+  profile: "B+N1+S2"
+  temperature: 0
+  seed: 42
+  quality_num_ctx: 4096
+  quality_num_predict: 1024
+  request_timeout_s: 600
+  long_timeout_s: 1500
+  speed_repeats: 3
+  speed_num_predict: 128
+  long_num_predict: 160
+  long_tokens_4096: 3000
+  long_tokens_8192: 6500
+
+thinking:
+  qwen2.5-coder: none
+  qwen3.5: "false"
+  gpt-oss: low
+  qwen3-coder: none
+
+sandbox:
+  image: "ollama/ollama@sha256:4e0d5daa6c5cd91e27011977031466844c5ea4ba2393b35e78068835edec040b"
+  language: bash
+  network: none
+  memory: 256m
+  pids_limit: 64
+  cpus: 1
+  timeout_s: 20
+
+thresholds:
+  wsl_ram_alert_pct: 85
+  wsl_ram_abort_pct: 95
+  swap_abort_gib: 2
+  windows_avail_min_gib: 4
+  cpu_alert_pct: 95
+  cpu_alert_minutes: 5
+  ssd_min_free_gib: 30
+  sample_interval_s: 1
+
+weights:
+  code: 40
+  reasoning: 15
+  speed: 15
+  memory: 10
+  tools: 10
+  instructions: 10
+
+categories:
+  code: "code_gen, debug, qa, fim (si capacité insert), devops"
+  reasoning: "review, security, architecture, multifile, long_4096, long_8192"
+  instructions: "instructions, documentation"
+  tools: "tools"
+  speed: "voir normalization"
+  memory: "voir normalization"
+
+normalization:
+  case_score: "fraction de critères satisfaits (0..1), ou fraction de tests exécutés réussis"
+  speed_out_tps_target: 20
+  speed_ttft_short_target_s: 1
+  speed_ttft_long_target_s: 30
+  speed_weight_out_tps: 0.5
+  speed_weight_ttft_short: 0.2
+  speed_weight_ttft_long: 0.3
+  memory_formula: "1 - (pic RAM WSL2 hors cache - base) / (85 % RAM WSL2 - base), borné 0..1"
+  missing: "catégorie non réalisée = exclue et poids renormalisés (aucun zéro artificiel)"
+  unsupported_fim: "capacité insert absente = cas fim exclu de code ; rôle autocomplete non éligible"
+  unsupported_tools: "capacité tools absente = score tools 0 (capacité réelle absente)"
+
+roles:
+  architect:
+    architecture: 0.35
+    multifile: 0.2
+    review: 0.15
+    long: 0.1
+    speed: 0.1
+    memory: 0.1
+  reviewer:
+    review: 0.45
+    security: 0.15
+    multifile: 0.2
+    instructions: 0.1
+    speed: 0.1
+  security:
+    security: 0.45
+    review: 0.25
+    devops: 0.1
+    instructions: 0.1
+    speed: 0.1
+  developer:
+    code_gen: 0.3
+    debug: 0.2
+    multifile: 0.15
+    tools: 0.15
+    long: 0.1
+    speed: 0.1
+  devops:
+    devops: 0.4
+    code_gen: 0.2
+    security: 0.15
+    tools: 0.1
+    speed: 0.15
+  debugger:
+    debug: 0.45
+    code_gen: 0.15
+    multifile: 0.2
+    speed: 0.2
+  qa:
+    qa: 0.5
+    code_gen: 0.2
+    instructions: 0.1
+    speed: 0.2
+  documentalist:
+    documentation: 0.45
+    instructions: 0.25
+    architecture: 0.1
+    speed: 0.2
+  assistant:
+    instructions: 0.3
+    tools: 0.2
+    documentation: 0.1
+    speed: 0.3
+    memory: 0.1
+  autocomplete:
+    fim: 0.6
+    speed: 0.3
+    memory: 0.1

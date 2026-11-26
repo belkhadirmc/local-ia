@@ -1,0 +1,64 @@
+{
+    "id":  "devops",
+    "category":  "code",
+    "kind":  "static",
+    "validation":  "static",
+    "extract":  "yaml",
+    "prompt":  "Write a Docker Compose file (YAML only, in a single ```yaml code block) defining one service named api with: image example/api:1.2.3@sha256:0000000000000000000000000000000000000000000000000000000000000000; user 1000:1000; read-only root filesystem; all Linux capabilities dropped; the no-new-privileges security option; a memory limit of 512m; restart policy \"no\"; attached only to a network named backend, which must be declared as an internal network; no published ports; no privileged mode and no Docker socket mount.",
+    "checks":  [
+                   {
+                       "name":  "compose_parses",
+                       "type":  "compose_valid"
+                   },
+                   {
+                       "name":  "image_exact",
+                       "type":  "regex",
+                       "pattern":  "example/api:1\\.2\\.3@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                   },
+                   {
+                       "name":  "user_1000",
+                       "type":  "regex",
+                       "pattern":  "user:\\s*[\"\u0027]?1000:1000"
+                   },
+                   {
+                       "name":  "read_only",
+                       "type":  "regex",
+                       "pattern":  "read_only:\\s*true"
+                   },
+                   {
+                       "name":  "cap_drop_all",
+                       "type":  "regex",
+                       "pattern":  "cap_drop:\\s*(\\[\\s*[\"\u0027]?ALL|\\r?\\n\\s*-\\s*[\"\u0027]?ALL)"
+                   },
+                   {
+                       "name":  "no_new_privileges",
+                       "type":  "regex",
+                       "pattern":  "no-new-privileges"
+                   },
+                   {
+                       "name":  "memory_512m",
+                       "type":  "regex",
+                       "pattern":  "(mem_limit|memory):\\s*[\"\u0027]?512[mM]"
+                   },
+                   {
+                       "name":  "restart_no",
+                       "type":  "regex",
+                       "pattern":  "restart:\\s*[\"\u0027]no[\"\u0027]"
+                   },
+                   {
+                       "name":  "internal_network",
+                       "type":  "regex",
+                       "pattern":  "internal:\\s*true"
+                   },
+                   {
+                       "name":  "no_ports",
+                       "type":  "not_regex",
+                       "pattern":  "(?m)^\\s*ports:"
+                   },
+                   {
+                       "name":  "no_privileged_or_socket",
+                       "type":  "not_regex",
+                       "pattern":  "privileged:\\s*true|docker\\.sock"
+                   }
+               ]
+}

@@ -1,0 +1,81 @@
+{
+    "id":  "tools",
+    "category":  "tools",
+    "kind":  "tools",
+    "validation":  "simulated (aucun outil exÃ©cutÃ©)",
+    "system":  "You are a coding agent. When an action is required, call the appropriate tool instead of answering in text.",
+    "tools":  [
+                  {
+                      "type":  "function",
+                      "function":  {
+                                       "name":  "run_tests",
+                                       "description":  "Run the unit tests of a module and return the results",
+                                       "parameters":  {
+                                                          "type":  "object",
+                                                          "properties":  {
+                                                                             "target":  {
+                                                                                            "type":  "string",
+                                                                                            "description":  "Path of the module or test file"
+                                                                                        },
+                                                                             "verbose":  {
+                                                                                             "type":  "boolean"
+                                                                                         }
+                                                                         },
+                                                          "required":  [
+                                                                           "target"
+                                                                       ]
+                                                      }
+                                   }
+                  },
+                  {
+                      "type":  "function",
+                      "function":  {
+                                       "name":  "read_file",
+                                       "description":  "Read a file of the workspace",
+                                       "parameters":  {
+                                                          "type":  "object",
+                                                          "properties":  {
+                                                                             "path":  {
+                                                                                          "type":  "string"
+                                                                                      }
+                                                                         },
+                                                          "required":  [
+                                                                           "path"
+                                                                       ]
+                                                      }
+                                   }
+                  },
+                  {
+                      "type":  "function",
+                      "function":  {
+                                       "name":  "search_code",
+                                       "description":  "Search the codebase for a text query",
+                                       "parameters":  {
+                                                          "type":  "object",
+                                                          "properties":  {
+                                                                             "query":  {
+                                                                                           "type":  "string"
+                                                                                       }
+                                                                         },
+                                                          "required":  [
+                                                                           "query"
+                                                                       ]
+                                                      }
+                                   }
+                  }
+              ],
+    "requests":  [
+                     {
+                         "user":  "Run the unit tests for the module src/parser.py and tell me if they pass.",
+                         "expect_tool":  "run_tests",
+                         "arg":  "target",
+                         "arg_pattern":  "parser"
+                     },
+                     {
+                         "user":  "Show me the content of config/app.yaml.",
+                         "expect_tool":  "read_file",
+                         "arg":  "path",
+                         "arg_pattern":  "config/app\\.yaml"
+                     }
+                 ]
+}

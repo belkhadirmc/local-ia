@@ -1,0 +1,10 @@
+{
+    "id":  "code_gen",
+    "category":  "code",
+    "kind":  "exec",
+    "validation":  "executed",
+    "eval_gen":  true,
+    "expected_tests":  10,
+    "prompt":  "Write two bash functions.\n1. rev_words: takes one string argument and prints its words in reverse order separated by single spaces (runs of spaces are collapsed; leading and trailing spaces are ignored). An empty or blank argument prints an empty line.\n2. is_palindrome: takes one string argument and returns exit status 0 if it is a palindrome when ignoring case and every non-alphanumeric character, 1 otherwise. An empty string is a palindrome. It prints nothing.\nUse only bash builtins and coreutils. Reply with a single ```bash code block containing only the two functions, no explanations.",
+    "tests":  "t(){ if [ \"$2\" == \"$3\" ]; then echo \"PASS $1\"; else echo \"FAIL $1\"; fi; }\nt rw1 \"c b a\" \"$(rev_words \u0027a b  c\u0027)\"\nt rw2 \"\" \"$(rev_words \u0027\u0027)\"\nt rw3 \"world hello\" \"$(rev_words \u0027  hello   world \u0027)\"\nt rw4 \"one\" \"$(rev_words \u0027one\u0027)\"\np(){ if is_palindrome \"$2\" \u003e/dev/null 2\u003e\u00261; then r=0; else r=1; fi; if [ \"$r\" == \"$3\" ]; then echo \"PASS $1\"; else echo \"FAIL $1\"; fi; }\np pa1 \"A man, a plan, a canal: Panama\" 0\np pa2 \"racecar\" 0\np pa3 \"hello\" 1\np pa4 \"\" 0\np pa5 \"No \u0027x\u0027 in Nixon\" 0\np pa6 \"ab\" 1"
+}

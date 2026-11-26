@@ -1,0 +1,54 @@
+{
+    "id":  "architecture",
+    "category":  "reasoning",
+    "kind":  "static",
+    "validation":  "static",
+    "prompt":  "Propose a minimal architecture for a local multi-agent coding assistant running on one Windows laptop with Docker, Ollama (CPU only) and an orchestrator that routes tasks to specialised agents working in per-project sandboxes. Use exactly these four Markdown headings: ## Components, ## Data flow, ## Security, ## Risks. Maximum 250 words.",
+    "checks":  [
+                   {
+                       "name":  "h_components",
+                       "type":  "regex",
+                       "pattern":  "(?m)^##\\s*Components"
+                   },
+                   {
+                       "name":  "h_dataflow",
+                       "type":  "regex",
+                       "pattern":  "(?m)^##\\s*Data flow"
+                   },
+                   {
+                       "name":  "h_security",
+                       "type":  "regex",
+                       "pattern":  "(?m)^##\\s*Security"
+                   },
+                   {
+                       "name":  "h_risks",
+                       "type":  "regex",
+                       "pattern":  "(?m)^##\\s*Risks"
+                   },
+                   {
+                       "name":  "isolation",
+                       "type":  "regex",
+                       "pattern":  "(?i)isolat|sandbox|container"
+                   },
+                   {
+                       "name":  "least_privilege",
+                       "type":  "regex",
+                       "pattern":  "(?i)least[- ]privilege|non-root|read-only|cap_drop|capabilit"
+                   },
+                   {
+                       "name":  "network_control",
+                       "type":  "regex",
+                       "pattern":  "(?i)network|egress|internet|offline"
+                   },
+                   {
+                       "name":  "resource_limits",
+                       "type":  "regex",
+                       "pattern":  "(?i)memory|\\bRAM\\b|one model|single model|queue|concurren|resource"
+                   },
+                   {
+                       "name":  "max_260_words",
+                       "type":  "max_words",
+                       "value":  260
+                   }
+               ]
+}

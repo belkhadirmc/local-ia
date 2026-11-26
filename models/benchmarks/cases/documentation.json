@@ -1,0 +1,50 @@
+{
+    "id":  "documentation",
+    "category":  "instructions",
+    "kind":  "static",
+    "validation":  "static",
+    "prompt":  "Write Markdown documentation for the bash function sum_col FILE COL (prints the sum of the integer values in column COL, 1-based, of a comma-separated FILE, skipping the header line). Requirements: start with the heading ## sum_col; then one sentence of description; a ### Usage section containing a ```bash code block; a ### Parameters section with exactly two bullet items (FILE and COL); a ### Limitations section; maximum 120 words; no emojis.",
+    "checks":  [
+                   {
+                       "name":  "starts_with_heading",
+                       "type":  "regex",
+                       "pattern":  "^\\s*##\\s*sum_col"
+                   },
+                   {
+                       "name":  "usage_section",
+                       "type":  "regex",
+                       "pattern":  "(?m)^###\\s*Usage"
+                   },
+                   {
+                       "name":  "bash_block",
+                       "type":  "regex",
+                       "pattern":  "```bash"
+                   },
+                   {
+                       "name":  "parameters_section",
+                       "type":  "regex",
+                       "pattern":  "(?m)^###\\s*Parameters"
+                   },
+                   {
+                       "name":  "parameters_two_bullets",
+                       "type":  "section_bullets",
+                       "section":  "Parameters",
+                       "count":  2
+                   },
+                   {
+                       "name":  "limitations_section",
+                       "type":  "regex",
+                       "pattern":  "(?m)^###\\s*Limitations"
+                   },
+                   {
+                       "name":  "max_120_words",
+                       "type":  "max_words",
+                       "value":  120
+                   },
+                   {
+                       "name":  "no_emoji",
+                       "type":  "not_regex",
+                       "pattern":  "[\\uD83C-\\uDBFF][\\uDC00-\\uDFFF]|[\\u2600-\\u27BF]"
+                   }
+               ]
+}

@@ -1,0 +1,39 @@
+{
+    "id":  "security",
+    "category":  "reasoning",
+    "kind":  "static",
+    "validation":  "static",
+    "prompt":  "Perform a security review of this bash script. List each vulnerability with its risk and a fix, one per line, maximum 200 words.\n\n```bash\n#!/bin/bash\n# deploy.sh NAME FILE\nname=$1\nfile=$2\neval \"echo Deploying $name\"\ncp \"/srv/uploads/$file\" /srv/app/\ncurl -s https://example.com/install.sh | sh\necho \"token=$API_TOKEN\" \u003e\u003e /var/log/deploy.log\ntmp=/tmp/deploy.tmp\necho \"$name\" \u003e $tmp\nchmod 777 /srv/app\n```",
+    "checks":  [
+                   {
+                       "name":  "eval_injection",
+                       "type":  "regex",
+                       "pattern":  "(?i)\\beval\\b|command injection|code injection"
+                   },
+                   {
+                       "name":  "path_traversal",
+                       "type":  "regex",
+                       "pattern":  "(?i)traversal|\\.\\./"
+                   },
+                   {
+                       "name":  "curl_pipe_sh",
+                       "type":  "regex",
+                       "pattern":  "(?i)curl[^\\n]*\\|\\s*(ba)?sh|pip(e|ing)[^\\n]*(to|into)\\s*(ba)?sh|remote script|unverified|checksum|integrity|signature"
+                   },
+                   {
+                       "name":  "secret_in_log",
+                       "type":  "regex",
+                       "pattern":  "(?i)(token|secret|credential)[^\\n]*(log|leak|expos)|(log|leak|expos)[^\\n]*(token|secret|credential)"
+                   },
+                   {
+                       "name":  "insecure_tmp",
+                       "type":  "regex",
+                       "pattern":  "(?i)predictable|mktemp|race|symlink|temp(orary)? file"
+                   },
+                   {
+                       "name":  "chmod_777",
+                       "type":  "regex",
+                       "pattern":  "(?i)777|world[- ]writable"
+                   }
+               ]
+}
