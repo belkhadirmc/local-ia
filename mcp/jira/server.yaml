@@ -4,7 +4,7 @@ id: jira
 name: Jira
 enabled: false
 status: prepared
-activation: n4-relay-untested   # 10.B.1 : relais distant généré ; non testé contre l'origine réelle (aucune connexion externe sans accord)
+activation: n4-relay   # 10.B.1 : chaîne relais -> sortie -> origine fixe testée en témoin HTTP local ; TLS vers l'origine réelle non testé (aucune connexion externe sans accord)
 official: true
 image: null            # serveur distant officiel Atlassian (aucune image) ; accès via relais N4 à définir
 transport: http

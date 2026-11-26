@@ -150,6 +150,8 @@ $sq
     volumes:
       - ./egress.conf:/etc/local-ai/squid.conf:ro
 "@
+    # squid résout ses origines au démarrage : en mode témoin, la sortie démarre après les services témoins
+    if ($Witness) { $svc += "`n    depends_on: [witness-allowed, witness-blocked]" }
     if ($D.Type -eq 'container-http') {
         $envLines = @(@($D.Env) + @("HTTPS_PROXY=http://mcp-egress-$($D.Id):3128", "HTTP_PROXY=http://mcp-egress-$($D.Id):3128", 'NO_PROXY=')) | ForEach-Object { "      - `"$_`"" }
         $svc += @"

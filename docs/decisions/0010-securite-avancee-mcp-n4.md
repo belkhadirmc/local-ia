@@ -75,7 +75,8 @@ techniquement, R11 ; S3 déclarait 2, ramené à 1). Changement : `local-ai.ps1 
 | Permissions MCP : developer `github_*` → ask ; assistant, qa → deny ; serveur non activé → deny | PASS |
 | Arrêt d'urgence : 1 session active interrompue, 3 relais arrêtés, OpenCode arrêté, 1 modèle déchargé ; `start`/`mcp enable` refusés ; `clear` + `start` → sain, 5 sessions et 7 modèles conservés | PASS |
 | `mcp disable` : relais, réseaux de test et fichiers générés supprimés ; configuration identique au générateur | PASS |
-| Connexion réelle à GitHub, GitLab, Atlassian | NON TESTÉ (aucun jeton ni accord) |
+| Relais distant (GitLab) en témoin : relais → sortie → origine fixe atteinte (401 de l’origine témoin), chemin hors MCP → 403 ; démarrage de la sortie après les témoins (squid résout l’origine au démarrage, correctif) | PASS (simulé, HTTP sans TLS) |
+| Connexion réelle à GitHub, GitLab, Atlassian ; TLS vers les origines réelles | NON TESTÉ (aucun jeton ni accord) |
 
 ## Incident corrigé
 
