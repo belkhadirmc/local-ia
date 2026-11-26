@@ -1,11 +1,13 @@
 # local-ai
 
 Infrastructure de développement multi-agent locale : Docker Desktop (WSL2), Ollama, OpenCode, Continue, VS Code.
-État (9.B.1) : **Ollama 0.40.18** (CPU, réseau interne, aucun port publié) avec **7 modèles** (52,98 Gio, aucun chargé au repos, benchmarks 6.B.1) ;
+État (11.B.1) : **Ollama 0.40.18** (CPU, réseau interne, aucun port publié) avec **7 modèles** (52,98 Gio, aucun chargé au repos, benchmarks 6.B.1) ;
 **OpenCode 2.3.2** sur `http://127.0.0.1:4096` (authentification locale, sans accès Internet, fournisseur Ollama interne uniquement) ;
 **10 agents** finalisés (9 dans OpenCode, Assistant par défaut ; autocomplétion Continue à l'étape 11), permissions S2 et délégations de profondeur 1 appliquées par le serveur ; raisonnement des modèles qwen3.5 désactivé dans OpenCode (9.B.2 : premier message ≈ 110 s à froid, puis ≈ 10 s) ;
 sécurité S1–S4 (S2 par défaut), permissions gérées, refus techniques prioritaires, arrêt d'urgence et journal d'audit (10.B.1) ;
-MCP GitHub, GitLab, Jira, Confluence **préparés et désactivés**, architecture N4 (relais isolés, sortie filtrée par destination) prête.
+MCP GitHub, GitLab, Jira, Confluence **préparés et désactivés**, architecture N4 (relais isolés, sortie filtrée par destination) prête ;
+VS Code : **Continue 2.0.0** (autocomplétion locale qwen2.5-coder:1.5b via relais 127.0.0.1:11435, désactivée par défaut) et **Dev Containers 0.481.0**
+(projets isolés : workspace dédié, réseau interne, seul le projet ouvert partagé avec OpenCode) — guide : `docs/guides/projects.md`.
 
 ## Arborescence
 
@@ -18,7 +20,7 @@ MCP GitHub, GitLab, Jira, Confluence **préparés et désactivés**, architectur
 | `mcp/` | registre et serveurs officiels GitHub, GitLab, Jira, Confluence (préparés, désactivés) |
 | `profiles/` | performance A/B/C, réseau N1-N4, sécurité S1-S4, sauvegarde BK1-BK3 |
 | `scripts/` | lifecycle, profils, supervision, maintenance, sauvegarde (à venir) |
-| `projects/` | projets indépendants (non suivis), `templates/` suivis |
+| `projects/` | projets Dev Containers (non suivis), `templates/devcontainer/` suivi (11.B.1) |
 | `secrets/` | identifiants réels — jamais versionnés |
 | `runtime/`, `backups/`, `exports/` | données locales — jamais versionnées |
 | `tests/`, `docs/` | tests, architecture, guides, décisions |
@@ -39,6 +41,8 @@ MCP GitHub, GitLab, Jira, Confluence **préparés et désactivés**, architectur
 .\local-ai.ps1 mcp disable <id> [--revoke]                  # arrête et supprime les relais ; --revoke retire la copie du jeton
 .\local-ai.ps1 permissions list|check|grant|revoke|reset|profile   # S1-S4, autorisations persistantes, évaluation sans inférence
 .\local-ai.ps1 emergency-stop [status|clear]                # interrompt sessions, agents et MCP ; décharge les modèles (sans suppression)
+.\local-ai.ps1 continue install|on|off|status               # autocomplétion Continue locale (relais 127.0.0.1:11435), activation manuelle
+.\local-ai.ps1 project list|create|open|stop <id>           # projets Dev Containers isolés ; seul le projet ouvert est partagé avec OpenCode
 .\local-ai.ps1 agent list                # agents, modèles, écarts à l'affectation initiale, avertissements outils/RAM
 .\local-ai.ps1 agent model <agent> [<modèle>]   # afficher / changer durablement (BK1 + rollback, OpenCode régénéré)
 .\local-ai.ps1 agent reset <agent|all>   # revenir aux affectations initiales (agents/assignments.initial.yaml)

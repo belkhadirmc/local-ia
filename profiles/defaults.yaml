@@ -67,4 +67,22 @@ modules:
     activation: "sur accord : jeton lecture seule de l'utilisateur dans secrets/mcp-<id>.env puis mcp enable <id> --authorize-n4"
     images: ["ubuntu/squid:6.6-24.04_edge@sha256:d588976774988e439af518940316004280dec80772c19af1cc33ae39afa5d2eb", "ghcr.io/github/github-mcp-server:v2.3.0@sha256:110ce018ce2a559b3d552673e675806ad9c2abbc1749360d41289ea415c67926"]
     verified: "2026-11-26 (10.B.1, GitHub en témoin local ; aucune connexion externe)"
+  continue:
+    status: installed_disabled
+    extension: "Continue.continue@2.0.0"
+    model: qwen2.5-coder:1.5b
+    relay: "127.0.0.1:11435 (arrêté par défaut ; local-ai.ps1 continue on|off)"
+    telemetry: false
+    indexing: false
+    verified: "2026-11-26 (11.B.1, API du relais ; interface non testée)"
+  projects:
+    status: ready
+    extension: "ms-vscode-remote.remote-containers@0.481.0"
+    image: "mcr.microsoft.com/devcontainers/base:3.0.14-noble@sha256:6d5b4ab2e68690be81f114a096f147fd95f0230910bcd17421e84459e5a17e1a"
+    active: none
+    sharing: "seul le projet ouvert est monté dans OpenCode (/data/workspace/<id>)"
+    verified: "2026-11-26 (11.B.1, projets témoins supprimés)"
+  vscode:
+    terminal_profile: "OpenCode (local-ai)"
+    web: "http://127.0.0.1:4096"
 note: "État appliqué renseigné manuellement ; à automatiser via local-ai.ps1 profile (non implémenté)."

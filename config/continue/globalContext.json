@@ -1,0 +1,7 @@
+{
+  "sharedConfig": {
+    "allowAnonymousTelemetry": false,
+    "disableIndexing": true,
+    "disableSessionTitles": true
+  }
+}

@@ -27,6 +27,8 @@ $Implemented = [ordered]@{
     'agent'  = 'agent list | agent model <agent> [<modèle>] | agent reset <agent|all> (BK1 + rollback, OpenCode régénéré)'
     'permissions'    = 'permissions list|check|grant|revoke|reset|profile (S1-S4, autorisations persistantes, refus techniques prioritaires)'
     'emergency-stop' = 'emergency-stop [status|clear] : interrompt les sessions, arrête agents et relais MCP, décharge les modèles (sans suppression)'
+    'continue'       = 'continue install|on|off|status : autocomplétion locale qwen2.5-coder:1.5b via relais 127.0.0.1:11435 (désactivée par défaut)'
+    'project'        = 'project list|create <id>|open <id>|stop <id> : projets Dev Containers isolés ; seul le projet ouvert est partagé avec OpenCode'
 }
 # Modules démarrables : profils Compose, image (variables .env), volumes externes requis, services arrêtés par stop
 $Modules = @{
@@ -771,6 +773,10 @@ function Invoke-EmergencyStop {
             # 2. relais MCP arrêtés (conteneurs conservés, réseau N4 coupé de fait)
             $mcp = @((Invoke-Native docker @('ps', '-q', '--filter', 'label=local-ai.module=mcp')).Output -split "`n" | Where-Object { $_ })
             if ($mcp.Count) { [void](Invoke-Native docker (@('stop', '-t', '5') + $mcp)) }; $steps += "relais MCP arrêtés : $($mcp.Count)"
+            # 2b. relais Continue et Dev Containers des projets (11.B.1)
+            [void](Invoke-Native docker @('compose', '-f', (Join-Path $Root 'compose.yaml'), '--profile', 'ollama', '--profile', 'continue', 'stop', '-t', '5', 'continue-relay', 'continue-net'))
+            $dev = @((Invoke-Native docker @('ps', '-q', '--filter', 'label=local-ai.module=project')).Output -split "`n" | Where-Object { $_ })
+            if ($dev.Count) { [void](Invoke-Native docker (@('stop', '-t', '5') + $dev)) }; $steps += "relais Continue arrêté ; Dev Containers arrêtés : $($dev.Count)"
             # 3. agents arrêtés (OpenCode et son espace réseau)
             $r = Invoke-Native docker @('compose', '-f', (Join-Path $Root 'compose.yaml'), '--profile', 'ollama', '--profile', 'opencode', 'stop', '-t', '10', 'opencode', 'opencode-net'); $steps += "OpenCode arrêté (code $($r.Code))"
             # 4. modèles déchargés (Ollama reste disponible, interne)
@@ -782,7 +788,135 @@ function Invoke-EmergencyStop {
     }
 }
 
+# ------------------------------------------------------------------ Continue (autocomplétion locale)
+function Get-JsonProp($o, [string]$n) { if ($null -ne $o -and (@($o.PSObject.Properties | ForEach-Object Name) -contains $n)) { $o.$n } else { $null } }
+function Get-LoadedModels { try { $c = Get-OllamaContainer; @((Invoke-Native docker @('exec', $c, '/bin/ollama', 'ps')).Output -split "`n" | Select-Object -Skip 1 | Where-Object { $_.Trim() } | ForEach-Object { ($_ -split '\s+')[0] }) } catch { @() } }
+function Set-VsCodeSettings([hashtable]$Values) {
+    # Fusion dans %APPDATA%\Code\User\settings.json (JSON sans commentaire), copie de sauvegarde BK1 préalable.
+    $f = Join-Path $env:APPDATA 'Code\User\settings.json'; $u = New-Object Text.UTF8Encoding $false
+    $cur = if (Test-Path $f) { [IO.File]::ReadAllText($f, $u) | ConvertFrom-Json } else { [pscustomobject]@{} }
+    $bk = Join-Path $Root ("backups\restore-points\vscode_" + (Get-Date -Format 'yyyyMMdd_HHmmss')); New-Item -ItemType Directory -Force $bk | Out-Null
+    if (Test-Path $f) { Copy-Item $f (Join-Path $bk 'settings.json') }
+    foreach ($k in $Values.Keys) { if (@($cur.PSObject.Properties | ForEach-Object Name) -contains $k) { $cur.$k = $Values[$k] } else { $cur | Add-Member -NotePropertyName $k -NotePropertyValue $Values[$k] } }
+    [IO.File]::WriteAllText($f, ($cur | ConvertTo-Json -Depth 8), $u)
+    $bk.Substring($Root.Length + 1)
+}
+$ContinueSvc = @('continue-relay', 'continue-net')
+function Invoke-Continue {
+    param([string[]]$Args0)
+    $sub = if ($Args0 -and $Args0[0]) { $Args0[0].ToLowerInvariant() } else { 'status' }
+    $cf = { param($a) @('compose', '-f', (Join-Path $Root 'compose.yaml'), '--profile', 'ollama', '--profile', 'continue') + $a }
+    $relayState = { $id = (Invoke-Native docker (& $cf @('ps', '-q', 'continue-relay'))).Output.Trim(); if ($id) { (Invoke-Native docker @('inspect', $id, '--format', '{{.State.Status}}{{if .State.Health}} ({{.State.Health.Status}}){{end}}')).Output.Trim() } else { 'arrêté' } }
+    switch ($sub) {
+        'status' {
+            $vs = Join-Path $env:APPDATA 'Code\User\settings.json'; $tab = if (Test-Path $vs) { (Get-JsonProp (Get-Content $vs -Raw | ConvertFrom-Json) 'continue.enableTabAutocomplete') } else { $null }
+            Write-Output ("Relais 127.0.0.1:11435 : {0} | VS Code continue.enableTabAutocomplete : {1} | config : {2} | télémétrie Continue : {3}" -f (& $relayState), $tab,
+                $(if (Test-Path (Join-Path $env:USERPROFILE '.continue\config.yaml')) { 'installée' } else { 'absente' }),
+                $(if (Test-Path $vs) { if ((Get-JsonProp (Get-Content $vs -Raw | ConvertFrom-Json) 'continue.telemetryEnabled') -eq $false) { 'désactivée' } else { 'ACTIVE' } } else { '?' }))
+            Write-Output ("Modèles chargés : {0}" -f $(if (@(Get-LoadedModels).Count) { (Get-LoadedModels) -join ', ' } else { 'aucun' }))
+        }
+        'install' {
+            $dir = Join-Path $env:USERPROFILE '.continue'; New-Item -ItemType Directory -Force (Join-Path $dir 'index') | Out-Null
+            $cfgDst = Join-Path $dir 'config.yaml'; if (Test-Path $cfgDst) { Copy-Item $cfgDst "$cfgDst.bak-$(Get-Date -Format 'yyyyMMdd_HHmmss')" }
+            Copy-Item (Join-Path $Root 'config\continue\config.yaml') $cfgDst -Force
+            $gc = Join-Path $dir 'index\globalContext.json'; $u = New-Object Text.UTF8Encoding $false
+            $want = (Get-Content (Join-Path $Root 'config\continue\globalContext.json') -Raw | ConvertFrom-Json).sharedConfig
+            $g = if (Test-Path $gc) { [IO.File]::ReadAllText($gc, $u) | ConvertFrom-Json } else { [pscustomobject]@{} }
+            if (-not (@($g.PSObject.Properties | ForEach-Object Name) -contains 'sharedConfig')) { $g | Add-Member -NotePropertyName sharedConfig -NotePropertyValue ([pscustomobject]@{}) }
+            foreach ($p in $want.PSObject.Properties) { if (@($g.sharedConfig.PSObject.Properties | ForEach-Object Name) -contains $p.Name) { $g.sharedConfig.($p.Name) = $p.Value } else { $g.sharedConfig | Add-Member -NotePropertyName $p.Name -NotePropertyValue $p.Value } }
+            [IO.File]::WriteAllText($gc, ($g | ConvertTo-Json -Depth 6), $u)
+            $vals = @{}; (Get-Content (Join-Path $Root 'config\vscode\settings.local-ai.json') -Raw | ConvertFrom-Json).PSObject.Properties | ForEach-Object { $vals[$_.Name] = $_.Value }
+            $bk = Set-VsCodeSettings $vals
+            Write-Audit 'continue.install' 'vscode' 'appliqué' $bk
+            Write-Output "Continue configuré : autocomplétion locale uniquement (désactivée), télémétrie et indexation désactivées, profil de terminal « OpenCode (local-ai) » ajouté | sauvegarde : $bk"
+        }
+        'on' {
+            Assert-NoEmergency
+            $why = @()
+            try { $act = Invoke-OcApi 'GET' '/api/session/active' ''; if ($act -match 'ses_') { $why += 'session OpenCode active (une seule inférence à la fois)' } } catch { }
+            $other = @(Get-LoadedModels | Where-Object { $_ -ne 'qwen2.5-coder:1.5b' }); if ($other) { $why += "modèle chargé par OpenCode : $($other -join ', ') (aucun déchargement automatique)" }
+            if ($why) { Write-Audit 'continue.on' 'relais' 'refusé' ($why -join ' ; '); throw ("Activation Continue REFUSÉE :`n - " + ($why -join "`n - ")) }
+            $r = Invoke-Native docker (& $cf @('up', '-d', '--pull', 'never', '--no-build', 'continue-relay')); if ($r.Code -ne 0) { throw "démarrage du relais : $($r.Output)" }
+            $d = (Get-Date).AddSeconds(90); do { Start-Sleep 3; $st = & $relayState } while ($st -notmatch 'healthy' -and (Get-Date) -lt $d)
+            if ($st -notmatch '\(healthy\)') { throw "relais non sain ($st)" }
+            $msg = ''; if ($Args0 -contains '--vscode') { $msg = ' ; VS Code : continue.enableTabAutocomplete=true (sauvegarde ' + (Set-VsCodeSettings @{ 'continue.enableTabAutocomplete' = $true }) + ')' }
+            Write-Audit 'continue.on' 'relais' 'activé' $msg
+            Write-Output ("Relais d'autocomplétion actif sur 127.0.0.1:11435 (qwen2.5-coder:1.5b uniquement){0}. Activer dans VS Code : barre d'état « Continue » → Enable Tab Autocomplete. Pendant une inférence OpenCode, le relais répond 409 (aucune substitution)." -f $msg)
+        }
+        'off' {
+            $r = Invoke-Native docker (& $cf (@('stop') + $ContinueSvc)); $vs = Join-Path $env:APPDATA 'Code\User\settings.json'
+            $msg = ''; if ((Test-Path $vs) -and (Get-JsonProp (Get-Content $vs -Raw | ConvertFrom-Json) 'continue.enableTabAutocomplete') -eq $true) { $msg = ' ; VS Code : continue.enableTabAutocomplete=false (sauvegarde ' + (Set-VsCodeSettings @{ 'continue.enableTabAutocomplete' = $false }) + ')' }
+            if (@(Get-LoadedModels) -contains 'qwen2.5-coder:1.5b') { try { [void](Invoke-Native docker @('exec', (Get-OllamaContainer), '/bin/ollama', 'stop', 'qwen2.5-coder:1.5b')) } catch { } }
+            Write-Audit 'continue.off' 'relais' 'arrêté' $msg
+            Write-Output "Relais d'autocomplétion arrêté (conteneurs conservés), qwen2.5-coder:1.5b déchargé$msg."
+        }
+        default { Write-Error "Sous-commande 'continue $sub' inconnue (install, on, off, status)." -ErrorAction Continue; exit 2 }
+    }
+}
+
+# ------------------------------------------------------------------ projets (Dev Containers)
+function Get-ActiveProject { $v = Get-EnvValue 'LOCAL_AI_PROJECT'; if ($v -and $v -ne 'none') { $v } else { $null } }
+function Set-EnvValue([string]$Name, [string]$Value) {
+    $f = Join-Path $Root '.env'; $u = New-Object Text.UTF8Encoding $false; $t = if (Test-Path $f) { [IO.File]::ReadAllText($f, $u) } else { '' }
+    if ($t -match ('(?m)^' + [regex]::Escape($Name) + '=')) { $t = [regex]::Replace($t, '(?m)^' + [regex]::Escape($Name) + '=.*$', "$Name=$Value") } else { $t = $t.TrimEnd() + "`n$Name=$Value`n" }
+    [IO.File]::WriteAllText($f, $t, $u)
+}
+function Update-OpenCodeWorkspace {
+    # Recrée le seul conteneur opencode pour (dé)monter le workspace du projet actif ; espace réseau et garde de sortie inchangés.
+    $r = Invoke-Native docker @('compose', '-f', (Join-Path $Root 'compose.yaml'), '--profile', 'ollama', '--profile', 'opencode', 'up', '-d', '--pull', 'never', '--no-build', '--no-deps', 'opencode')
+    if ($r.Code -ne 0) { throw "OpenCode : $($r.Output)" }
+    $d = (Get-Date).AddSeconds(120); do { Start-Sleep 3; $id = Get-OpenCodeId; $h = if ($id) { (Invoke-Native docker @('inspect', $id, '--format', '{{.State.Health.Status}}')).Output.Trim() } else { '' } } while ($h -ne 'healthy' -and (Get-Date) -lt $d)
+    if ($h -ne 'healthy') { throw "OpenCode non sain ($h)" }
+}
+function Invoke-Project {
+    param([string[]]$Args0)
+    $sub = if ($Args0 -and $Args0[0]) { $Args0[0].ToLowerInvariant() } else { 'list' }
+    $id = if ($Args0.Count -ge 2) { $Args0[1].ToLowerInvariant() } else { $null }
+    $pdir = { param($p) Join-Path $Root "projects\$p\.devcontainer" }
+    $need = { if (-not $id) { throw "Usage : .\local-ai.ps1 project $sub <id>" }; if ($id -notmatch '^[a-z0-9][a-z0-9-]{1,30}$' -or $id -eq 'none') { throw "Identifiant de projet invalide : '$id' (a-z, 0-9, tiret ; 2 à 31 caractères)." } }
+    $exists = { param($p) (Invoke-Native docker @('volume', 'inspect', "local-ai-workspace-$p", '--format', '{{.Name}}')).Code -eq 0 }
+    switch ($sub) {
+        'list' {
+            $act = Get-ActiveProject
+            $vols = @((Invoke-Native docker @('volume', 'ls', '--filter', 'label=local-ai.volume=workspace', '--format', '{{.Name}}')).Output -split "`n" | Where-Object { $_ } | ForEach-Object { $_ -replace '^local-ai-workspace-', '' })
+            $rows = foreach ($p in $vols) { $c = (Invoke-Native docker @('ps', '-a', '--filter', "label=local-ai.project=$p", '--format', '{{.Status}}')).Output.Trim()
+                [pscustomobject]@{ Projet = $p; Ouvert = $(if ($p -eq $act) { 'OUI (partagé avec OpenCode)' } else { 'non' }); 'Dev Container' = $(if ($c) { $c } else { 'non créé' }); Config = $(if (Test-Path (& $pdir $p)) { "projects/$p/.devcontainer" } else { 'absente' }) } }
+            if ($rows) { $rows | Format-Table -AutoSize | Out-String -Width 200 | Write-Output } else { Write-Output 'Aucun projet.' }
+            Write-Output ("Projet partagé avec OpenCode : {0}" -f $(if ($act) { "$act (/data/workspace/$act)" } else { 'aucun' }))
+        }
+        'create' {
+            & $need; if (& $exists $id) { throw "Projet '$id' déjà existant." }
+            foreach ($v in @(@("local-ai-workspace-$id", 'workspace'), @("local-ai-cache-$id", 'cache'))) { $r = Invoke-Native docker @('volume', 'create', '--label', "local-ai.volume=$($v[1])", '--label', "local-ai.project=$id", '--label', 'local-ai.module=project', $v[0]); if ($r.Code -ne 0) { throw $r.Output } }
+            $img = "$(Get-EnvValue 'OPENCODE_IMAGE_REPO'):$(Get-EnvValue 'OPENCODE_IMAGE_TAG')@sha256:$(Get-EnvValue 'OPENCODE_IMAGE_SHA256')"
+            $r = Invoke-Native docker @('run', '--rm', '--network', 'none', '--read-only', '--cap-drop', 'ALL', '--cap-add', 'CHOWN', '--security-opt', 'no-new-privileges', '--user', '0:0', '-v', "local-ai-workspace-${id}:/w", '-v', "local-ai-cache-${id}:/c", '--entrypoint', '/bin/busybox', $img, 'sh', '-c', 'echo local-ai > /w/.local-ai-project && echo local-ai > /c/.local-ai-cache && chown 1000:1000 /w /c /w/.local-ai-project /c/.local-ai-cache')
+            if ($r.Code -ne 0) { throw "initialisation des volumes : $($r.Output)" }
+            $dst = & $pdir $id; New-Item -ItemType Directory -Force $dst | Out-Null; $u = New-Object Text.UTF8Encoding $false
+            foreach ($f in 'devcontainer.json', 'compose.yaml') { [IO.File]::WriteAllText((Join-Path $dst $f), ([IO.File]::ReadAllText((Join-Path $Root "projects\templates\devcontainer\$f"), $u)).Replace('{{ID}}', $id), $u) }
+            Write-Audit 'project.create' $id 'créé'
+            Write-Output "Projet '$id' créé : volumes local-ai-workspace-$id et local-ai-cache-$id (uid 1000), réseau interne local-ai-project-$id, configuration projects/$id/.devcontainer."
+        }
+        'open' {
+            & $need; Assert-NoEmergency; if (-not (& $exists $id)) { throw "Projet '$id' inconnu (project create $id)." }
+            $r = Invoke-Native docker @('compose', '-f', (Join-Path (& $pdir $id) 'compose.yaml'), 'up', '-d', '--pull', 'never', '--no-build'); if ($r.Code -ne 0) { throw "Dev Container : $($r.Output)" }
+            $prev = Get-ActiveProject; Set-EnvValue 'LOCAL_AI_PROJECT' $id; Set-EnvValue 'LOCAL_AI_PROJECT_RO' 'false'
+            try { Update-OpenCodeWorkspace } catch { if ($prev) { Set-EnvValue 'LOCAL_AI_PROJECT' $prev } else { Set-EnvValue 'LOCAL_AI_PROJECT' 'none'; Set-EnvValue 'LOCAL_AI_PROJECT_RO' 'true' }; try { Update-OpenCodeWorkspace } catch { }; throw "ouverture : $($_.Exception.Message) — projet précédent rétabli" }
+            Write-Audit 'project.open' $id 'ouvert' $(if ($prev -and $prev -ne $id) { "remplace $prev" } else { '' })
+            Write-Output ("Projet '{0}' ouvert : Dev Container démarré ; partagé avec OpenCode sous /data/workspace/{0} (seul projet monté){1}. VS Code : ouvrir le dossier projects\{0} puis « Dev Containers: Reopen in Container »." -f $id, $(if ($prev -and $prev -ne $id) { " ; '$prev' n'est plus partagé" } else { '' }))
+        }
+        'stop' {
+            & $need
+            $f = Join-Path (& $pdir $id) 'compose.yaml'; if (Test-Path $f) { $r = Invoke-Native docker @('compose', '-f', $f, 'stop'); if ($r.Code -ne 0) { throw $r.Output } }
+            $msg = ''; if ((Get-ActiveProject) -eq $id) { Set-EnvValue 'LOCAL_AI_PROJECT' 'none'; Set-EnvValue 'LOCAL_AI_PROJECT_RO' 'true'; Update-OpenCodeWorkspace; $msg = ' ; plus aucun projet partagé avec OpenCode' }
+            Write-Audit 'project.stop' $id 'arrêté'
+            Write-Output "Projet '$id' arrêté (volumes et données conservés)$msg."
+        }
+        default { Write-Error "Sous-commande 'project $sub' inconnue (list, create, open, stop)." -ErrorAction Continue; exit 2 }
+    }
+}
+
 switch ($Command.ToLowerInvariant()) {
+    'continue'       { try { Invoke-Continue $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
+    'project'        { try { Invoke-Project $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
     'permissions'    { try { Invoke-Permissions $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
     'emergency-stop' { try { Invoke-EmergencyStop $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
     'agent'  { try { Invoke-Agent $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }

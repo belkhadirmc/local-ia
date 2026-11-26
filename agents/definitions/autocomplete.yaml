@@ -25,5 +25,6 @@ mcp:
   authorizable: []
   enabled: []
 continue:
-  config_template: ../../config/continue/config.template.yaml
-  status: not_installed
+  config_template: ../../config/continue/config.yaml
+  relay: "http://127.0.0.1:11435 (compose/templates/continue.yaml, config/continue/relay.pl)"
+  status: installed_disabled   # 11.B.1 : extension Continue 2.0.0 ; activation manuelle (local-ai.ps1 continue on)

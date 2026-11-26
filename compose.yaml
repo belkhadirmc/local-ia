@@ -7,6 +7,7 @@ include:
   - path: compose/services/core.yaml
   - path: compose/templates/ollama.yaml   # ACTIF (4.B.1), profil Compose "ollama"
   - path: compose/templates/opencode.yaml # ACTIF (7.B.1), profil Compose "opencode"
+  - path: compose/templates/continue.yaml # 11.B.1, profil Compose "continue" (désactivé par défaut : local-ai.ps1 continue on)
   # Modules INACTIFS (modèles) — à activer un par un après validation :
   # - path: compose/templates/mcp.yaml
   # - path: compose/templates/project.yaml

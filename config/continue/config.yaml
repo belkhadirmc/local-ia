@@ -1,0 +1,31 @@
+# Configuration Continue local-ai (11.B.1) — copiée par .\local-ai.ps1 continue install vers %USERPROFILE%\.continue\config.yaml.
+# AUTOCOMPLÉTION LOCALE UNIQUEMENT : aucun modèle de chat/édition/embedding, aucun fournisseur cloud, aucun MCP.
+# apiBase = relais local-ai 127.0.0.1:11435 (modèle et opérations restreints, Ollama jamais publié). Désactivée par défaut :
+# relais arrêté et continue.enableTabAutocomplete=false ; activation manuelle : .\local-ai.ps1 continue on.
+name: local-ai
+version: "0.0.2"
+schema: v1
+models:
+  - name: "qwen2.5-coder 1.5b (autocomplétion locale)"
+    provider: ollama
+    model: qwen2.5-coder:1.5b
+    apiBase: http://127.0.0.1:11435
+    roles:
+      - autocomplete
+    defaultCompletionOptions:
+      contextLength: 2048
+      maxTokens: 128
+      temperature: 0
+      keepAlive: 120
+    autocompleteOptions:
+      debounceDelay: 350
+      maxPromptTokens: 1024
+      modelTimeout: 5000
+      onlyMyCode: true
+      useCache: true
+      useImports: false
+      useRecentlyEdited: false
+      useRecentlyOpened: false
+    requestOptions:
+      timeout: 30
+context: []

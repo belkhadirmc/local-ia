@@ -22,12 +22,16 @@ Statut : ouvert — à traiter avant ou pendant le déploiement (étape 4+).
 | R15 | Règles shell par motifs : une obfuscation (`git  push`, alias, script) retombe sur `ask`, pas sur `deny`. | Validation humaine ; aucune sortie réseau possible (N1). |
 | R16 | Proxy de sortie `ubuntu/squid` canal `_edge` (le canal `_beta` 24.04 date de 2025). | Suivre les mises à jour Canonical, réépingler par digest. |
 | R17 | Relais MCP joignables depuis l’espace réseau d’OpenCode (donc par un shell d’agent approuvé) ; le jeton reste dans le relais, mais l’API en lecture seule du fournisseur est accessible par ce chemin. | Jetons à portée minimale (lecture seule, dépôts/projets choisis), MCP désactivés par défaut. |
+| R18 | Dev Containers : les conteneurs de projet n’ont aucun accès Internet ; l’installation du serveur VS Code et des extensions dans le conteneur (« Reopen in Container ») n’a pas été testée depuis l’interface et peut échouer sans téléchargement côté hôte. | Test manuel dans VS Code ; si échec, fenêtre N2 dédiée ou image de projet enrichie (arbitrage R3). |
+| R19 | Continue testé par l’API du relais uniquement (complétion FIM réelle), pas dans l’éditeur ; dans une fenêtre Dev Container, Continue s’exécute dans le conteneur et ne joint pas le relais 127.0.0.1:11435 de l’hôte. | Utiliser Continue dans les fenêtres locales ; test manuel de l’interface. |
+| R20 | Relais Continue en Perl sans analyseur JSON (module JSON::PP absent de l’image) : contrôle du modèle par expression régulière (toutes les clés `model` doivent être le modèle autorisé) ; conflit détecté par `/api/ps` (fenêtre de course possible au démarrage d’une inférence). | Refus par défaut, routes limitées ; Ollama mono-modèle et mono-requête. |
+| R21 | Extensions installées par version explicite : épinglage contre la mise à jour automatique de VS Code non vérifié. | Vérifier dans le panneau Extensions ; désactiver la mise à jour par extension si besoin. |
 | R6 | `qwen3-coder:30b` : contexte 8192 **validé** en 6.B.1 (prompt de 7249 tokens, aiguille 100 %), pic 84,6 % de RAM WSL2 hors cache (alerte 85 %) et RAM Windows disponible minimale 4,35 Gio (interruption < 4 Gio) : marge quasi nulle ; appels d'outils non extraits par Ollama 0.40.18 (balise `<tool_call>` ouvrante absente). | Usage exclusif (aucune charge concurrente) ; pas de contexte > 8192 en profil B ; ne pas l'affecter à un rôle à outils sans correctif de modèle de prompt. |
 
 ## Fonctionnalités différées
 
 - Images MCP (référence GitHub épinglée, non téléchargée). OpenCode épinglé et déployé en 7.B.1 (ADR-0007) ; Ollama en 4.B.1 (ADR-0004).
-- Modèle Continue à valider. (Configuration OpenCode générée depuis `agents/definitions/` en 7.B.1.)
+- Continue installé et configuré en 11.B.1 (ADR-0011) ; interface non testée (R19).
 - Commandes `local-ai.ps1` : model pull/rm, profile, agent, mcp enable (refus explicite), monitor, permissions, backup, restore, maintenance, emergency-stop.
 - Tests d'exécution : sécurité, isolation réseau, localhost, supervision (seuils `config/monitoring/thresholds.yaml`).
 - État appliqué des profils N1/S2 : non appliqué tant qu'aucun service n'est déployé (`profiles/defaults.yaml`).

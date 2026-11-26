@@ -1,0 +1,118 @@
+# MODULE Continue (autocomplétion) — 11.B.1, profil Compose "continue", DÉSACTIVÉ par défaut (local-ai.ps1 continue on|off).
+# Relais localhost 127.0.0.1:11435 limité à qwen2.5-coder:1.5b et aux opérations d'autocomplétion (config/continue/relay.pl).
+# L'API Ollama n'est jamais publiée. Même montage réseau qu'OpenCode (R1) : porteur d'espace réseau + garde de sortie (NET_ADMIN seul),
+# démarrage du relais seulement si la sortie Internet est vérifiée bloquée. Images déjà présentes et épinglées (aucun téléchargement).
+x-continue-logging: &continue-logging
+  driver: local
+  options:
+    max-size: "5m"
+    max-file: "3"
+    compress: "true"
+
+services:
+  continue-net:
+    image: ${OPENCODE_IMAGE_REPO:?OPENCODE_IMAGE_REPO requis}:${OPENCODE_IMAGE_TAG:?OPENCODE_IMAGE_TAG requis (version explicite)}@sha256:${OPENCODE_IMAGE_SHA256:?OPENCODE_IMAGE_SHA256 requis (64 hex)}
+    profiles: [continue]
+    restart: "no"
+    user: "1000:1000"
+    entrypoint: ["/bin/busybox", "sleep", "2147483647"]
+    command: []
+    networks: [local-ai-core, local-ai-localhost]
+    ports:
+      - "127.0.0.1:11435:8080"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 32m
+    pids_limit: 8
+    healthcheck:
+      test: ["CMD", "/bin/sh", "-c", "! /bin/busybox ip route | grep -q '^default' && ! /bin/busybox ip -6 route | grep -q '^default'"]
+      interval: 30s
+      timeout: 5s
+      retries: 1
+      start_period: 20s
+      start_interval: 2s
+    logging: *continue-logging
+
+  continue-egress-guard:
+    image: ${OPENCODE_IMAGE_REPO:?OPENCODE_IMAGE_REPO requis}:${OPENCODE_IMAGE_TAG:?OPENCODE_IMAGE_TAG requis (version explicite)}@sha256:${OPENCODE_IMAGE_SHA256:?OPENCODE_IMAGE_SHA256 requis (64 hex)}
+    profiles: [continue]
+    restart: "no"
+    user: "0:0"
+    depends_on:
+      continue-net:
+        condition: service_started
+    network_mode: "service:continue-net"
+    entrypoint:
+      - /bin/sh
+      - -c
+      - >-
+        ip route del default 2>/dev/null; ip -6 route del default 2>/dev/null;
+        if ip route | grep -q '^default' || ip -6 route | grep -q '^default'; then echo 'route par défaut présente'; exit 1; fi;
+        if wget -q -T 4 -O /dev/null http://1.1.1.1/ 2>/dev/null; then echo 'sortie Internet possible'; exit 1; fi;
+        echo 'sortie Internet bloquée'
+    command: []
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [NET_ADMIN]
+    security_opt:
+      - no-new-privileges:true
+    logging: *continue-logging
+
+  continue-relay:
+    image: ${OLLAMA_IMAGE_REPO:?OLLAMA_IMAGE_REPO requis}:${OLLAMA_IMAGE_TAG:?OLLAMA_IMAGE_TAG requis (version explicite)}@sha256:${OLLAMA_IMAGE_SHA256:?OLLAMA_IMAGE_SHA256 requis (64 hex)}
+    profiles: [continue]
+    restart: "no"
+    user: "1000:1000"
+    depends_on:
+      continue-egress-guard:
+        condition: service_completed_successfully
+      continue-net:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+        required: false
+    entrypoint: ["/usr/bin/perl", "/etc/local-ai/relay.pl"]
+    command: []
+    environment:
+      RELAY_MODEL: "qwen2.5-coder:1.5b"
+      RELAY_UPSTREAM: "ollama:11434"
+      RELAY_KEEP_ALIVE: "120"
+    network_mode: "service:continue-net"
+    volumes:
+      - type: bind
+        source: ../../config/continue/relay.pl
+        target: /etc/local-ai/relay.pl
+        read_only: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 64m
+    pids_limit: 32
+    healthcheck:
+      test: ["CMD", "/usr/bin/perl", "-MIO::Socket::INET", "-e", "exit(IO::Socket::INET->new(PeerAddr => '127.0.0.1:8080', Timeout => 3) ? 0 : 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging: *continue-logging
+
+networks:
+  local-ai-core:
+    name: local-ai-core
+    driver: bridge
+    internal: true
+    labels:
+      local-ai.network: core
+      local-ai.authorization: none
+  local-ai-localhost:
+    name: local-ai-localhost
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: "false"
+      com.docker.network.bridge.host_binding_ipv4: "127.0.0.1"
+    labels:
+      local-ai.network: localhost
+      local-ai.authorization: required

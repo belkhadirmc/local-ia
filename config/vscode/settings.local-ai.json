@@ -1,0 +1,18 @@
+{
+  "continue.telemetryEnabled": false,
+  "continue.enableTabAutocomplete": false,
+  "continue.enableNextEdit": false,
+  "continue.enableQuickActions": false,
+  "continue.showInlineTip": false,
+  "continue.enableConsole": false,
+  "continue.pauseCodebaseIndexOnStart": true,
+  "continue.remoteConfigServerUrl": "",
+  "editor.inlineSuggest.enabled": true,
+  "terminal.integrated.profiles.windows": {
+    "OpenCode (local-ai)": {
+      "path": "powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "C:\\dev\\local-ai\\local-ai.ps1", "tui"],
+      "icon": "robot"
+    }
+  }
+}

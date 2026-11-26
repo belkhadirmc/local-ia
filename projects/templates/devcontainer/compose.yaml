@@ -1,0 +1,49 @@
+# MODÈLE Dev Container local-ai (11.B.1) — copié et instancié par .\local-ai.ps1 project create <id> dans projects/<id>/.devcontainer/.
+# Workspace persistant dédié (volume externe local-ai-workspace-<id>), cache séparé (local-ai-cache-<id>), réseau interne
+# local-ai-project-<id> (aucune sortie Internet, aucun autre projet), utilisateur non-root vscode (1000), aucune capacité,
+# no-new-privileges (sudo inopérant), aucun socket Docker, aucun montage du disque Windows. Image officielle épinglée.
+name: local-ai-proj-{{ID}}
+services:
+  dev:
+    image: mcr.microsoft.com/devcontainers/base:3.0.14-noble@sha256:6d5b4ab2e68690be81f114a096f147fd95f0230910bcd17421e84459e5a17e1a
+    user: "1000:1000"
+    command: ["sleep", "infinity"]
+    working_dir: /workspaces/{{ID}}
+    hostname: dev-{{ID}}
+    volumes:   # nocopy : Docker ne réattribue pas le volume au propriétaire du point de montage de l'image
+      - type: volume
+        source: workspace
+        target: "/workspaces/{{ID}}"
+        volume:
+          nocopy: true
+      - type: volume
+        source: cache
+        target: /home/vscode/.cache
+        volume:
+          nocopy: true
+    networks: [project]
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 4g
+    pids_limit: 512
+    restart: "no"
+    labels:
+      local-ai.module: project
+      local-ai.project: "{{ID}}"
+
+volumes:
+  workspace:
+    name: local-ai-workspace-{{ID}}
+    external: true
+  cache:
+    name: local-ai-cache-{{ID}}
+    external: true
+
+networks:
+  project:
+    name: local-ai-project-{{ID}}
+    internal: true
+    labels:
+      local-ai.network: project
+      local-ai.project: "{{ID}}"

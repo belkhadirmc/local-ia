@@ -110,6 +110,14 @@ services:
     network_mode: "service:opencode-net"
     volumes:
       - local-ai-opencode:/data
+      # 11.B.1 : SEUL le projet ouvert (LOCAL_AI_PROJECT, .\local-ai.ps1 project open <id>) est partagé avec les agents ;
+      # sans projet ouvert, volume vide « local-ai-workspace-none » en lecture seule. Les autres projets ne sont jamais montés.
+      - type: volume
+        source: local-ai-active-workspace
+        target: /data/workspace/${LOCAL_AI_PROJECT:-none}
+        read_only: ${LOCAL_AI_PROJECT_RO:-true}
+        volume:
+          nocopy: true
       - type: bind
         source: ../../config/opencode/opencode.json
         target: /etc/opencode/opencode.json
@@ -159,4 +167,7 @@ networks:
 volumes:
   local-ai-opencode:
     name: local-ai-opencode
+    external: true
+  local-ai-active-workspace:
+    name: local-ai-workspace-${LOCAL_AI_PROJECT:-none}
     external: true
