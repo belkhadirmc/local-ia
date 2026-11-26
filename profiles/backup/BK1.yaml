@@ -1,17 +1,20 @@
-# Profil de sauvegarde BK1.
-schema: local-ai/profile/backup/v1
+# Profil de sauvegarde BK1 — configurations (v1.0.0, ADR-0015). Commande : .\local-ai.ps1 backup create BK1
+schema: local-ai/profile/backup/v2
 id: BK1
 name: configuration
+status: implemented
 scope:
-  - "%USERPROFILE%\\.wslconfig"
-  - "%USERPROFILE%\\.docker\\daemon.json"
-  - "%USERPROFILE%\\.docker\\config.json"
-  - "%APPDATA%\\Docker\\settings-store.json"
-  - config/
-  - profiles/
-  - compose/
-destination: backups/restore-points
-integrity: "sha256 (SHA256SUMS.txt + manifest)"
-secrets: "jamais copiés en clair"
-quota_local_gib: 10
+  - "fichiers suivis du dépôt (config/, profiles/, compose/, agents/, models/, mcp/, scripts/, tests/, docs/, …)"
+  - ".env (sans secret, analysé)"
+  - '%USERPROFILE%\.wslconfig'
+  - '%USERPROFILE%\.docker\daemon.json'
+  - '%APPDATA%\Docker\settings-store.json (si aucun motif de secret)'
+excluded:
+  - "secrets/ (jamais en clair)"
+  - '%USERPROFILE%\.docker\config.json (identifiants de registre possibles)'
+  - "runtime/, backups/, exports/"
+destination: backups/sets/BK1_<horodatage>
+integrity: "manifest.json + SHA256SUMS.txt + empreintes par fichier ; vérification après création"
+quota_local_gib: 10          # global, pour tout backups/
 automatic_deletion_of_critical: false
+also: "points de restauration d'actions et d'agents : backups/restore-points (créés avant chaque changement de configuration)"

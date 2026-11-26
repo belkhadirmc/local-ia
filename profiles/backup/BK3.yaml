@@ -1,13 +1,14 @@
-# Profil de sauvegarde BK3.
-schema: local-ai/profile/backup/v1
+# Profil de sauvegarde BK3 — complet (v1.0.0, ADR-0015). Commande : backup create BK3 [--external <dossier hors disque système>]
+schema: local-ai/profile/backup/v2
 id: BK3
 name: complet
+status: implemented
 scope:
   - BK1
   - BK2
-  - "volume local-ai-ollama (optionnel : modèles re-téléchargeables)"
-destination: backups/volumes
-integrity: "sha256 (SHA256SUMS.txt + manifest)"
-secrets: "jamais copiés en clair"
+  - "volume local-ai-ollama : UNIQUEMENT avec --external, sur un stockage hors disque système et hors dépôt (jamais de duplication locale)"
+destination: "backups/sets/BK3_<horodatage> (+ <externe>/local-ai-models-<id> pour les modèles)"
+integrity: "manifest.json + SHA256SUMS.txt + empreintes par fichier"
 quota_local_gib: 10
 automatic_deletion_of_critical: false
+tested: "refus disque système et stockage absent (15.B.1) ; archivage externe des modèles NON testé (aucun support externe, R36)"

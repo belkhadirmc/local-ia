@@ -40,17 +40,17 @@ $Modules = @{
     'opencode' = @{ Profiles = @('ollama', 'opencode'); ImagePrefix = 'OPENCODE'; Volumes = @('local-ai-ollama', 'local-ai-opencode', 'local-ai-tools'); Service = 'opencode'
                     StopServices = @('opencode', 'opencode-net'); Secrets = @('secrets\opencode.env'); ConfigCheck = 'config\opencode\generate-config.ps1' }
 }
-$Planned = [ordered]@{
-    'backup'         = 'Sauvegarde BK1 / BK2 / BK3'
-    'restore'        = 'Restauration depuis un point de sauvegarde'
-    'maintenance'    = 'Fenêtre de maintenance (profil N2)'
-}
+$Implemented['backup']      = 'backup list | status | create BK1|BK2|BK3 [--external <dossier>] | verify <id|chemin> | delete <id> --confirm'
+$Implemented['restore']     = 'restore <id> [--item <nom>] (--target-dir <dossier> | --volume-suffix <suffixe> | --production) [--confirm] : prévisualisation par défaut'
+$Implemented['maintenance'] = 'maintenance status : Docker, sauvegardes, journaux, sentinelle, configuration (lecture seule, aucune purge)'
+$Planned = [ordered]@{}   # v1.0.0 : toutes les commandes prévues sont implémentées (model pull/rm restent refusés : aucun téléchargement implicite)
 $EmergencyFlag = Join-Path $Root 'runtime\state\emergency.json'
 . (Join-Path $Root 'scripts\mcp\n4.ps1')
 . (Join-Path $Root 'scripts\perf\profile.ps1')
 . (Join-Path $Root 'scripts\monitor\monitor.ps1')
 . (Join-Path $Root 'scripts\agents\fallback.ps1')
 . (Join-Path $Root 'scripts\tools\tools.ps1')
+. (Join-Path $Root 'scripts\backup\backup.ps1')
 
 function Write-Audit([string]$Action, [string]$Target, [string]$Result, [string]$Detail = '') {
     # Journal d'audit local (runtime/logs/audit.jsonl, non versionné). Jamais de secret ni de contenu de fichier.
@@ -74,9 +74,8 @@ function Show-Help {
     Write-Output ''
     Write-Output 'Commandes implémentées :'
     foreach ($k in $Implemented.Keys) { Write-Output ('  {0,-15} {1}' -f $k, $Implemented[$k]) }
-    Write-Output ''
-    Write-Output 'Commandes prévues (NON IMPLÉMENTÉES, échouent explicitement) :'
-    foreach ($k in $Planned.Keys) { Write-Output ('  {0,-15} {1}' -f $k, $Planned[$k]) }
+    if ($Planned.Count) { Write-Output ''; Write-Output 'Commandes prévues (NON IMPLÉMENTÉES, échouent explicitement) :'; foreach ($k in $Planned.Keys) { Write-Output ('  {0,-15} {1}' -f $k, $Planned[$k]) } }
+    Write-Output ''; Write-Output 'Documentation : docs/guides/ (démarrage, utilisateur, agents, administration, sécurité, maintenance, sauvegarde, dépannage, extensions).'
 }
 
 function Invoke-Native {
@@ -1010,6 +1009,9 @@ function Invoke-Project {
 }
 
 switch ($Command.ToLowerInvariant()) {
+    'backup'         { try { Invoke-Backup $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
+    'restore'        { try { Invoke-Restore $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
+    'maintenance'    { try { Invoke-Maintenance $Arguments | Format-Table -AutoSize -Wrap | Out-String -Width 200 | Write-Output } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
     'tools'          { try { Invoke-Tools $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
     'fallback'       { try { Invoke-Fallback $Arguments | Format-Table -AutoSize -Wrap | Out-String -Width 220 | Write-Output } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
     'profile'        { try { Invoke-Profile $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }

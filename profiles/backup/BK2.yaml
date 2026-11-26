@@ -1,13 +1,18 @@
-# Profil de sauvegarde BK2.
-schema: local-ai/profile/backup/v1
+# Profil de sauvegarde BK2 — projets, sessions, volumes persistants et outils (v1.0.0, ADR-0015). Commande : backup create BK2
+schema: local-ai/profile/backup/v2
 id: BK2
 name: "données et projets"
+status: implemented
 scope:
-  - "volumes local-ai-workspace-*"
-  - "volume local-ai-opencode"
-  - projects/
-destination: backups/projects
-integrity: "sha256 (SHA256SUMS.txt + manifest)"
-secrets: "jamais copiés en clair"
+  - "projects/<id>/.devcontainer"
+  - "volume local-ai-opencode (sessions SQLite, journaux OpenCode)"
+  - "volumes local-ai-workspace-<id> et local-ai-cache-<id>"
+  - "volume local-ai-tools (Python/Git isolés)"
+excluded:
+  - "volume local-ai-ollama (modèles : BK3 --external uniquement)"
+  - "volumes témoins de restauration (label local-ai.volume=restore-test)"
+consistency: "OpenCode et Dev Containers en pause pendant l'archivage ; refus si une inférence est en cours"
+destination: backups/sets/BK2_<horodatage>
+integrity: "manifest.json + SHA256SUMS.txt + empreintes par fichier ; vérification après création"
 quota_local_gib: 10
 automatic_deletion_of_critical: false

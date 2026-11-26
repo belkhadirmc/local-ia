@@ -34,10 +34,11 @@ applied:
   backup:
     profile: BK1
     status: applied
-    restore_points:
-      - 2.B.1_20261125_164110
-      - 2.B.3_20261125_164653
-      - 2.B.3.1_20261125_165143
+    management: "local-ai.ps1 backup list|status|create BK1|BK2|BK3|verify|delete ; restore (prévisualisation, témoins, production protégée) — ADR-0015"
+    quota_local_gib: 10
+    sets_v1: "BK1 ≈ 0,2 Mio, BK2 ≈ 25,5 Mio (15.B.1, vérifiées) ; BK3 : modèles sur stockage externe uniquement"
+    restore_tests: "20/20 PASS sur cibles témoins (15.B.1)"
+    restore_points: "backups/restore-points (BK1 avant chaque changement de configuration)"
 modules:
   ollama:
     status: running

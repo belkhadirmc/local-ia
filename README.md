@@ -1,82 +1,68 @@
-# local-ai
+# Local-IA v1.0.0
 
-Infrastructure de développement multi-agent locale : Docker Desktop (WSL2), Ollama, OpenCode, Continue, VS Code.
-**V1 100 % locale** : aucun modèle cloud, aucun basculement automatique ; N3 conservé comme point d'extension futur (ADR-0013).
-**V1 finalisée (14.B.2, ADR-0014)** : affectations initiales conservées, **repli local contrôlé** par tâche (`agent handoff`,
-`fallback list|check|mode` ; 20B/30B/14B -> 9B -> 4B, qa/documentaliste -> 4B, sécurité -> 9B sur confirmation ; Web/TUI : repli
-manuel assisté), **Python 3.14 et Git 2.54 isolés** pour les agents (`tools status|verify`) ; aucune réserve bloquante.
-**V1 testée (14.B.1)** : passerelle d'inférence unique devant Ollama (JSON strict, une inférence à la fois, garde RAM
-avant/pendant, 30B/20B/14B refusés si la RAM Windows n'est pas garantie), délégation **manuelle** (`agent handoff`), shell des agents
-sans mot de passe ; **apte pour un usage local séquentiel supervisé avec qwen3.5:4b** ; affectations à confirmer (R5, recommandations ADR-0014).
-État (13.B.1) : **Ollama 0.40.18** (CPU, réseau interne, aucun port publié) avec **7 modèles** (52,98 Gio, aucun chargé au repos, benchmarks 6.B.1) ;
-**OpenCode 2.3.2** sur `http://127.0.0.1:4096` (authentification locale, sans accès Internet, fournisseur Ollama interne uniquement) ;
-**10 agents** finalisés (9 dans OpenCode, Assistant par défaut ; autocomplétion Continue à l'étape 11), permissions S2 et délégations de profondeur 1 appliquées par le serveur ; raisonnement des modèles qwen3.5 désactivé dans OpenCode (9.B.2 : premier message ≈ 110 s à froid, puis ≈ 10 s) ;
-sécurité S1–S4 (S2 par défaut), permissions gérées, refus techniques prioritaires, arrêt d'urgence et journal d'audit (10.B.1) ;
-MCP GitHub, GitLab, Jira, Confluence **préparés et désactivés**, architecture N4 (relais isolés, sortie filtrée par destination) prête ;
-VS Code : **Continue 2.0.0** (autocomplétion locale qwen2.5-coder:1.5b via relais 127.0.0.1:11435, désactivée par défaut, Tab validé) et **Dev Containers 0.481.0**, extensions épinglées
-(projets isolés : workspace dédié, réseau interne, seul le projet ouvert partagé avec OpenCode) — guide : `docs/guides/projects.md` ;
-tests d'interface VS Code (Continue/Tab, TUI, Dev Container Ubuntu 24.04.5 non-root) validés manuellement ;
-performances (12.B.1, ADR-0012) : WSL2 16 vCPU / 24 Gio, Ollama 8 threads, cache KV q8_0 — qwen3.5:4b **8,5 t/s (+22 %)**, qwen3-coder:30b 8,65 t/s (+7 %) ;
-profils A/B/C appliqués par `profile apply`, supervision légère `monitor`.
+Infrastructure de développement **multi-agent 100 % locale** pour Windows 11 : Docker Desktop (WSL2), Ollama (CPU), OpenCode,
+Continue et VS Code / Dev Containers. Aucun modèle cloud, aucune sortie Internet des conteneurs, supervision humaine (profil S2).
+
+| Composant | Version / état |
+|---|---|
+| Ollama | 0.40.18 (épinglé), 7 modèles locaux (≈ 53 Gio), un modèle et une inférence à la fois |
+| Passerelle d'inférence | seul accès au moteur : JSON strict, verrou unique, garde RAM avant/pendant, repli proposé |
+| OpenCode | 2.3.2 (épinglé), Web/TUI sur `http://127.0.0.1:4096`, 9 agents + autocomplétion Continue |
+| VS Code | Continue 2.0.0 et Dev Containers 0.481.0 épinglés, profil de terminal « OpenCode (local-ai) » |
+| Outils agents | Python 3.14.10 et Git 2.54.1 isolés (lecture seule) |
+| Profils | performance **B**, réseau **N1**, sécurité **S2**, sauvegarde **BK1** |
+| Performances (profil B) | qwen3.5:4b ≈ 8,5 t/s, qwen3-coder:30b ≈ 8,65 t/s (ADR-0012) |
+
+## Documentation
+
+| Guide | Contenu |
+|---|---|
+| [Démarrage](docs/guides/demarrage.md) | prérequis, premier lancement, premier projet |
+| [Utilisateur](docs/guides/utilisateur.md) | OpenCode, repli, délégation manuelle, Continue, bon usage de la RAM |
+| [Agents](docs/guides/agents-locaux.md) | les 10 agents, modèles, replis, permissions |
+| [Projets](docs/guides/projects.md) | Dev Containers, partage avec OpenCode |
+| [Administration](docs/guides/administration.md) | toutes les commandes `local-ai.ps1` |
+| [Sécurité](docs/guides/securite.md) | isolation, permissions, secrets, limites |
+| [Maintenance](docs/guides/maintenance.md) | routine, mises à jour, nettoyage |
+| [Sauvegarde et restauration](docs/guides/sauvegarde-restauration.md) | BK1/BK2/BK3, quota, restauration témoin/production |
+| [Dépannage](docs/guides/depannage.md) | symptômes et solutions |
+| [Extensions](docs/guides/extensions.md) | MCP, cloud (hors V1), nouveaux modèles/agents/outils |
+| [Architecture](docs/architecture/overview.md) · [Décisions](docs/decisions/) · [Réserves](docs/decisions/0003-reserves-et-differes.md) | conception, ADR-0001 à 0015, R1–R36 |
+| [CHANGELOG](CHANGELOG.md) · [ROADMAP](ROADMAP.md) | historique, évolutions possibles |
+
+## Commandes principales
+
+```powershell
+.\local-ai.ps1 help | status | config
+.\local-ai.ps1 start opencode | stop opencode | tui | emergency-stop [status|clear]
+.\local-ai.ps1 agent list | handoff <agent> "<consigne>" [--accept-fallback] [--watch <s>]
+.\local-ai.ps1 fallback list | check all | mode <agent> auto|ask|off
+.\local-ai.ps1 project list | create <id> | open <id> | stop <id>
+.\local-ai.ps1 continue on | off | status
+.\local-ai.ps1 monitor status | watch | maintenance status
+.\local-ai.ps1 backup status | create BK1|BK2|BK3 | verify <id> | restore <id> --target-dir <dossier> [--confirm]
+.\local-ai.ps1 profile list | permissions list | mcp list | tools status | model list
+```
 
 ## Arborescence
 
 | Dossier | Rôle |
 |---|---|
-| `compose/` | `services/` socle inclus, `templates/` modules (ollama et opencode actifs), `overrides/` surcharges sur autorisation |
-| `config/` | Ollama, OpenCode, Continue, réseau, sécurité, supervision |
-| `agents/` | définitions YAML indépendantes d'OpenCode, prompts, catalogue d'outils |
-| `models/` | registre des modèles, benchmarks |
-| `mcp/` | registre et serveurs officiels GitHub, GitLab, Jira, Confluence (préparés, désactivés) |
-| `profiles/` | performance A/B/C, réseau N1-N4, sécurité S1-S4, sauvegarde BK1-BK3 |
-| `scripts/` | MCP N4, profils de performance (`perf/`), supervision (`monitor/`) ; maintenance et sauvegarde à venir |
-| `projects/` | projets Dev Containers (non suivis), `templates/devcontainer/` suivi (11.B.1) |
-| `secrets/` | identifiants réels — jamais versionnés |
-| `runtime/`, `backups/`, `exports/` | données locales — jamais versionnées |
-| `tests/`, `docs/` | tests, architecture, guides, décisions |
+| `compose/` | socle (`services/`), modules (`templates/` : ollama + passerelle, opencode, continue), surcharges explicites (`overrides/`) |
+| `config/` | Ollama, passerelle (`gate/`), OpenCode (généré), Continue, agents (repli), outils, réseau, sécurité, supervision |
+| `agents/` | définitions, prompts, affectations initiales (référence de restauration) |
+| `models/` | registre des 7 modèles, benchmarks et microtests |
+| `mcp/` | serveurs GitHub, GitLab, Jira, Confluence (préparés, désactivés) |
+| `profiles/` | performance A/B/C, réseau N1–N4, sécurité S1–S4, sauvegarde BK1–BK3, `defaults.yaml` (souhaité / appliqué) |
+| `scripts/` | MCP N4, profils, supervision et sentinelle, repli, outils, sauvegarde |
+| `projects/` | modèle Dev Container (suivi) ; projets (non suivis) |
+| `tests/` | passerelle, Continue, agents, sauvegarde |
+| `secrets/`, `runtime/`, `backups/`, `exports/` | données locales — **jamais versionnées** |
 
-## Administration
+## Limites connues (v1.0.0)
 
-```powershell
-.\local-ai.ps1 help      # aide
-.\local-ai.ps1 status    # état en lecture seule
-.\local-ai.ps1 config    # validation de la configuration
-.\local-ai.ps1 start [ollama|opencode]   # validation préalable puis démarrage, sans téléchargement implicite
-.\local-ai.ps1 stop [ollama|opencode]    # arrêt sans suppression (conteneurs, réseau, volume conservés)
-.\local-ai.ps1 tui                       # interface terminal OpenCode (Web : http://127.0.0.1:4096, utilisateur opencode)
-.\local-ai.ps1 model list                # modèles présents vs registre
-.\local-ai.ps1 model show <tag>          # détails d'un modèle référencé
-.\local-ai.ps1 mcp list|status           # serveurs MCP et relais N4
-.\local-ai.ps1 mcp enable <id> --authorize-n4 [--witness]   # active un MCP (jeton requis) ; --witness = test local sans connexion
-.\local-ai.ps1 mcp disable <id> [--revoke]                  # arrête et supprime les relais ; --revoke retire la copie du jeton
-.\local-ai.ps1 permissions list|check|grant|revoke|reset|profile   # S1-S4, autorisations persistantes, évaluation sans inférence
-.\local-ai.ps1 emergency-stop [status|clear]                # interrompt sessions, agents et MCP ; décharge les modèles (sans suppression)
-.\local-ai.ps1 continue install|on|off|status               # autocomplétion Continue locale (relais 127.0.0.1:11435), activation manuelle
-.\local-ai.ps1 project list|create|open|stop <id>           # projets Dev Containers isolés ; seul le projet ouvert est partagé avec OpenCode
-.\local-ai.ps1 agent list                # agents, modèles, écarts à l'affectation initiale, avertissements outils/RAM
-.\local-ai.ps1 agent model <agent> [<modèle>]   # afficher / changer durablement (BK1 + rollback, OpenCode régénéré)
-.\local-ai.ps1 agent reset <agent|all>   # revenir aux affectations initiales (agents/assignments.initial.yaml)
-.\local-ai.ps1 agent handoff <agent> "<consigne>" [--accept-fallback] [--watch <s>] [--model <tag>]   # tâche avec repli contrôlé (nouvelle session)
-.\local-ai.ps1 fallback list | check <agent|all> | mode <agent> auto|ask|off   # politique de repli (journal runtime/logs/fallback.jsonl)
-.\local-ai.ps1 tools status | verify | install --confirm                      # Python/Git isolés et épinglés (volume local-ai-tools)
-.\local-ai.ps1 monitor simulate <Gio>|off                                     # seuils RAM simulés (tests, pessimistes uniquement)
-docker logs local-ai-ollama-gate-1       # décisions de la passerelle (admission RAM, refus, verrou, abandons)
-.\local-ai.ps1 profile list|show <A|B|C>         # profils de performance ; * = appliqué
-.\local-ai.ps1 profile apply <A|B|C> --confirm   # BK1 (.wslconfig comprise), redémarrage WSL2 si besoin, vérification, rollback
-.\local-ai.ps1 monitor status                    # CPU, RAM Windows/WSL2, swap, SSD, modèle actif, débit, alertes
-.\local-ai.ps1 monitor watch [s] [n]             # mesure périodique, historique runtime/monitor (7 j)
-.\models\benchmarks\microtest.ps1 -Label x [-NumThread n] [-Ctx n]   # microtest court (128 tokens), pas un benchmark complet
-```
+Usage **séquentiel et supervisé** sur CPU : premier message ≈ 1–2 min à froid ; modèles ≥ 14B admis seulement si la RAM Windows le
+permet ; plusieurs modèles de code n'appellent pas les outils (repli automatique vers qwen3.5) ; repli manuel assisté dans le Web/TUI ;
+délégation manuelle ; risques résiduels documentés (R14, R15, R17, R22, R31). Détail : [réserves](docs/decisions/0003-reserves-et-differes.md).
 
-Sélection **temporaire** d'un modèle : sélecteur de la session dans le Web ou le TUI (7 modèles du registre).
-OpenCode Desktop (Windows) : **non utilisé** — il impose un serveur autonome sur l'hôte avec accès Internet (ADR-0008, R9).
-
-Mot de passe Web/API : `secrets/opencode.env` (non versionné). Les autres commandes (`backup`, `restore`, `maintenance`) sont prévues et échouent explicitement tant qu'elles ne sont pas implémentées.
-
-## Profils par défaut
-
-`profiles/defaults.yaml` : performance **B**, réseau **N1**, sécurité **S2**, sauvegarde **BK1** (état souhaité vs appliqué).
-Profil réseau **N3** (IA cloud) : réservé, non applicable en V1 ; extension future selon `docs/decisions/0013-cloud-differe-hors-v1.md`.
-`.\local-ai.ps1 config` contrôle en permanence l'absence de fournisseur, de modèle et de repli cloud.
-
-Voir `docs/decisions/0001-politiques-validees.md` pour les seuils et politiques.
+Mot de passe Web/API : `secrets/opencode.env` (non versionné, jamais sauvegardé en clair). OpenCode Desktop n'est pas utilisé (R9).

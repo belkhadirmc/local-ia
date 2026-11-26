@@ -1,4 +1,4 @@
-# Guide — projets, VS Code, Continue et OpenCode (11.B.1)
+# Guide — projets, VS Code, Continue et OpenCode
 
 ## Projet Dev Container
 
@@ -11,7 +11,11 @@
 
 Dans VS Code : ouvrir le dossier `C:\dev\local-ai\projects\monprojet`, puis la commande « Dev Containers: Reopen in Container ».
 Le code est dans le volume `local-ai-workspace-monprojet` (`/workspaces/monprojet`), pas sur le disque Windows.
-Le conteneur n'a pas d'accès Internet : extensions et outils à installer depuis l'hôte ou à ajouter à l'image (réserve R18).
+Le conteneur n'a pas d'accès Internet. Python 3.14 et Git 2.54 isolés y sont disponibles (volume `local-ai-tools` en lecture seule,
+dans le PATH) pour les projets créés depuis la v1.0.0 ; le projet `demo` antérieur garde sa configuration (recréer sa configuration
+Dev Container pour en bénéficier). Toute autre dépendance : image de projet enrichie après arbitrage R3.
+
+Sauvegarde : `backup create BK2` (configuration du projet + workspace + cache) ; restauration témoin : `restore <id> --volume-suffix essai --confirm`.
 
 ## Autocomplétion (Continue)
 
@@ -27,5 +31,5 @@ suspendue (réponse 409), sans déchargement du modèle d'OpenCode.
 ## OpenCode depuis VS Code
 
 - Terminal : menu du terminal intégré → profil **« OpenCode (local-ai) »** (équivaut à `.\local-ai.ps1 tui`). Le TUI utilise le tmpfs
-  exécutable dédié `/tui-tmp` (`TMPDIR`), `/tmp` restant noexec (11.B.2).
+  exécutable dédié `/tui-tmp` (`TMPDIR`), `/tmp` restant noexec (11.B.2). Validé manuellement dans VS Code.
 - Web : `http://127.0.0.1:4096` (utilisateur `opencode`, mot de passe dans `secrets/opencode.env`), par exemple via « Simple Browser: Show ».

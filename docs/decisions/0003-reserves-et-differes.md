@@ -1,6 +1,6 @@
 # ADR-0003 — Réserves et fonctionnalités différées (clôture étape 3)
 
-Statut : ouvert — à traiter avant ou pendant le déploiement (étape 4+).
+Statut : **clos pour la v1.0.0** (15.B.1) — aucune réserve bloquante ; chaque réserve est classée (résolue, acceptable ou différée) et les risques résiduels restent documentés.
 
 ## Réserves
 
@@ -10,7 +10,8 @@ Statut : ouvert — à traiter avant ou pendant le déploiement (étape 4+).
 | R2 | Compose impose la structure `dépôt:version@sha256:<digest>` mais ne valide pas le format du digest. | Contrôle par `local-ai.ps1 config` (64 hex, tag ≠ latest) ; échec de pull si digest invalide. |
 | R3 | Docker Engine : `builder.gc` actif (`defaultKeepStorage: 20GB`) — purge automatique du cache BuildKit. Non critique, mais à arbitrer avant toute compilation d'image (OpenCode, MCP). | Décision avant la première construction ; aucune modification Docker en 3.B.2. |
 | R4 | ACL Windows : `secrets/`, `backups/`, `runtime/` restreints à l'utilisateur, SYSTEM et Administrateurs (héritage retiré ; avant : ACL 100 % héritées, dont Utilisateurs RX et Utilisateurs authentifiés M). ACL du parent sauvegardée : `backups/config/acl_parent_3.B.2_*.txt`. | Retour arrière : `icacls <dossier> /reset /T` (réapplique l'héritage du parent). |
-| R5 | Affectations des modèles aux agents non confirmées (outil `local-ai.ps1 agent` disponible depuis 8.B.1, référence `agents/assignments.initial.yaml`) ; benchmarks 6.B.1 réalisés (recommandations par rôle dans `models/benchmarks/report.md`). | Décision d'affectation (étape suivante). |
+| R5 | Affectations initiales **conservées** par décision (référence `agents/assignments.initial.yaml`) ; plusieurs modèles initiaux sans appels d’outils ou non admis par la garde RAM : agents rendus opérationnels par le **repli local contrôlé** (14.B.2) ; recommandations ADR-0014 non appliquées. | Changement durable seulement sur décision (`agent model`), après usage réel. |
+| R6 | `qwen3-coder:30b` : contexte 8192 **validé** en 6.B.1 (prompt de 7249 tokens, aiguille 100 %), pic 84,6 % de RAM WSL2 hors cache (alerte 85 %) et RAM Windows disponible minimale 4,35 Gio (interruption < 4 Gio) : marge quasi nulle ; appels d'outils non extraits par Ollama 0.40.18 (balise `<tool_call>` ouvrante absente). | Usage exclusif (aucune charge concurrente) ; pas de contexte > 8192 en profil B ; ne pas l'affecter à un rôle à outils sans correctif de modèle de prompt. |
 | R7 | MCP N4 **implémenté** (10.B.1) : relais isolés, filtrage de sortie par destination, lecture seule ; GitHub testé en témoin local ; GitLab, Jira, Confluence testés en témoin HTTP local mais **non testés** contre l’origine réelle (TLS) ; OAuth interactif non pris en charge par le relais (jeton injecté). | Activation réelle sur accord : jeton lecture seule créé par l’utilisateur dans `secrets/mcp-<id>.env`, puis `mcp enable <id> --authorize-n4`. |
 | R8 | OpenCode : la page Web (`/`) est servie sans authentification (coquille statique) ; l’API exige l’authentification Basic. Agents sur `qwen2.5-coder:*` et `qwen3-coder:30b` : appels d’outils non extraits par Ollama (6.B.1). | Surveillance des versions OpenCode ; affectations à revoir (R5). |
 | R9 | OpenCode Desktop (Windows) incompatible : CLI 2.4.2 téléchargée au lancement et serveur autonome sur l’hôte avec accès Internet (8.B.1) ; non connecté, application fermée. | Désinstallation recommandée ; réévaluer si une option « serveur distant uniquement » documentée apparaît. |
@@ -26,7 +27,7 @@ Statut : ouvert — à traiter avant ou pendant le déploiement (étape 4+).
 | R19 | Autocomplétion et Tab dans l’éditeur validés manuellement par l’utilisateur. Reste : dans une fenêtre Dev Container, Continue s’exécute dans le conteneur et ne joint pas le relais 127.0.0.1:11435 de l’hôte. | Utiliser Continue dans les fenêtres locales. |
 | R20 | **Résolue (14.B.1)** : analyseur JSON strict `LocalAiJson.pm` (relais et passerelle) et verrou d’inférence commun dans la passerelle (409 réel). Historique : Relais Continue en Perl sans analyseur JSON (module JSON::PP absent de l’image) : contrôle du modèle par expression régulière (toutes les clés `model` doivent être le modèle autorisé) ; conflit détecté par `/api/ps` (fenêtre de course possible au démarrage d’une inférence). | Refus par défaut, routes limitées ; Ollama mono-modèle et mono-requête. |
 | R21 | **Levée (11.B.2)** : Continue 2.0.0 et Dev Containers 0.481.0 `pinned: true` (stables) dans `~/.vscode/extensions/extensions.json`, mises à jour automatiques désactivées manuellement par l’utilisateur. | Ne mettre à jour qu’après vérification (BK1). |
-| R22 | TUI OpenCode : OpenTUI (Bun) extrait ses bibliothèques natives dans `TMPDIR` ; tmpfs exécutable dédié `/tui-tmp` (64 Mio, nosuid, nodev, uid 1000), `/tmp` reste noexec. Code exécutable possible dans `/tui-tmp` pour l’utilisateur 1000. Profil terminal VS Code validé manuellement par l’utilisateur (12.B.1). | `TMPDIR=/tui-tmp` uniquement pour `local-ai.ps1 tui` ; serveur inchangé. |
+| R22 | TUI OpenCode : OpenTUI (Bun) extrait ses bibliothèques natives dans `TMPDIR` ; tmpfs exécutable dédié `/tui-tmp` (64 Mio, nosuid, nodev, uid 1000), `/tmp` reste noexec. Code exécutable possible dans `/tui-tmp` pour l’utilisateur 1000. Profil terminal VS Code validé manuellement par l’utilisateur (12.B.1). | `TMPDIR=/tui-tmp` uniquement pour `local-ai.ps1 tui` ; serveur inchangé. |
 | R23 | RAM asymétrique 32 + 8 Gio : dual channel sur 16 Gio seulement, le reste en simple canal ; génération plafonnée vers 8 t/s (limite mémoire, pas CPU). | Matériel : 2 barrettes identiques (aucun achat, hors périmètre). |
 | R24 | **Résolue (14.B.1)** : passerelle d’inférence — admission sur RAM Windows projetée (sentinelle) et VM, surveillance pendant l’inférence, 30B/20B/14B bloqués si non garantis. Historique : Chargement de qwen3-coder:30b : RAM Windows libre descendue à 1,44 Gio (cache de pages WSL2), sous le seuil de 4 Gio ; rendue en moins d’1 min après déchargement. | `monitor` signale le niveau critique et bloque `continue on` ; aucune autre charge pendant le 30B. |
 | R25 | Températures et fréquences non lisibles sans droits administrateur ni outil constructeur (WMI « non pris en charge ») ; mode thermique Lenovo non vérifié. | Vérifier manuellement le mode de performances Lenovo. |
@@ -40,22 +41,19 @@ Statut : ouvert — à traiter avant ou pendant le déploiement (étape 4+).
 | R33 | Repli **manuel assisté** dans le Web/TUI : OpenCode 2.3.2 envoie la requête d’une session ouverte directement sans point d’interception ; la passerelle ne substitue jamais un modèle (affichage faux) et refuse avec la proposition de l’agent. Repli automatique seulement via `agent handoff`. | Sélecteur de modèle de la session ou `agent handoff` ; réévaluer avec une version d’OpenCode exposant un crochet pré-requête. |
 | R34 | Liste `tools_incompatible` statique (6.B.1/14.B.1) ; un modèle réévalué ou mis à jour peut changer de catégorie. | Mettre à jour `config/agents/fallback.yaml` après test. |
 | R35 | Réinstallation de `local-ai-tools` dépendante de la disponibilité des versions épinglées sur le dépôt Alpine 3.24 (versions remplacées au fil des correctifs). | Volume conservé ; `tools verify` ; nouvel épinglage explicite si réinstallation. |
+| R36 | Restauration `--production` réelle et BK3 avec archivage externe des modèles **non exécutés** (préservation des données, aucun support externe) ; extraction et vérification identiques aux restaurations témoins testées (20/20). | Tester sur un poste de test / un disque externe avant d’en dépendre. |
 
-## Classement V1 (14.B.1, mis à jour 14.B.2, ADR-0014)
+## Classement final v1.0.0 (15.B.1 ; ADR-0014, ADR-0015)
 
 | Classe | Réserves |
 |---|---|
-| **Résolues** | R30 (Python/Git isolés), R1 (sortie bloquée, revérifiée), R2, R4, R10 (passerelle : modèles du registre seuls), R11 (sans objet en délégation manuelle), R12 (transfert manuel `agent handoff`), R18, R20 (JSON strict + verrou commun réel), R21, R24 (garde RAM avant/pendant, 30B/20B/14B bloqués si non garantis), R6 (30B protégé par la garde ; outils → R5) |
-| **Bloquante** | aucune (14.B.2) |
-| **Acceptables** (risque connu, atténué) | R5 (affectations initiales conservées ; repli contrôlé, ADR-0014), R3, R8 (coquille Web statique ; outils → R5), R9, R13, R14 (mot de passe retiré de l’environnement des commandes ; `/proc/1/environ` résiduel), R15, R16, R17, R19, R22, R23, R25, R27, R28, R31, R32, R33, R34, R35 |
-| **Différées** | R7 (MCP réels), R26 (Vulkan), R29 (cloud hors V1) |
-| R6 | `qwen3-coder:30b` : contexte 8192 **validé** en 6.B.1 (prompt de 7249 tokens, aiguille 100 %), pic 84,6 % de RAM WSL2 hors cache (alerte 85 %) et RAM Windows disponible minimale 4,35 Gio (interruption < 4 Gio) : marge quasi nulle ; appels d'outils non extraits par Ollama 0.40.18 (balise `<tool_call>` ouvrante absente). | Usage exclusif (aucune charge concurrente) ; pas de contexte > 8192 en profil B ; ne pas l'affecter à un rôle à outils sans correctif de modèle de prompt. |
+| **Résolues** (12) | R1 sortie bloquée (revérifiée), R2 contrôle des digests, R4 ACL, R6 30B protégé par la garde RAM, R10 modèles du registre seuls (passerelle), R11 sans objet (délégation manuelle), R12 transfert manuel, R18 Dev Container validé, R20 JSON strict + verrou commun, R21 extensions épinglées, R24 garde RAM avant/pendant, R30 Python/Git isolés |
+| **Bloquantes** (0) | aucune |
+| **Acceptables** (21) | R3 cache BuildKit (aucune construction), R5 affectations initiales + repli, R8 coquille Web statique, R9 Desktop non utilisé, R13 démarrage à froid, R14 `/proc/1/environ`, R15 obfuscation → ask, R16 squid `_edge`, R17 relais MCP joignables si activés, R19 Continue hors Dev Container, R22 tmpfs exécutable du TUI, R23 RAM asymétrique, R25 températures illisibles, R27 prompt OpenCode, R28 profils A/C non mesurés, R31 projection RAM prudente, R32 sécurité sur 4b, R33 repli Web/TUI manuel assisté, R34 liste d’outils statique, R35 réinstallation des outils, R36 production/BK3 externe non exécutés |
+| **Différées** (3) | R7 MCP réels, R26 Vulkan/Vega 8, R29 cloud hors V1 |
 
-## Fonctionnalités différées
+## Fonctionnalités différées (hors v1.0.0)
 
-- **IA cloud : hors V1** (ADR-0013) — profil N3 et réseau `local-ai-cloud` réservés, procédure d’extension documentée.
-- Images MCP (référence GitHub épinglée, non téléchargée). OpenCode épinglé et déployé en 7.B.1 (ADR-0007) ; Ollama en 4.B.1 (ADR-0004).
-- Continue installé et configuré en 11.B.1 (ADR-0011) ; autocomplétion et Tab validés manuellement (11.B.2) ; TUI corrigé (R22).
-- Commandes `local-ai.ps1` non implémentées : model pull/rm, backup, restore, maintenance (profile et monitor : 12.B.1).
-- Tests d'exécution : sécurité, isolation réseau, localhost, supervision (seuils `config/monitoring/thresholds.yaml`).
-- État appliqué des profils N1/S2 : non appliqué tant qu'aucun service n'est déployé (`profiles/defaults.yaml`).
+- IA cloud (ADR-0013, R29) ; MCP réels sur jetons utilisateur (R7) ; accélération GPU (R26).
+- `model pull|rm` : volontairement refusés (aucun téléchargement implicite) ; ajout d’un modèle par procédure (guide extensions).
+- Repli automatique dans le Web/TUI (R33) : dépend d’un crochet pré-requête d’OpenCode.
