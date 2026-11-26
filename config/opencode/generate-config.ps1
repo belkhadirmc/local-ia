@@ -29,10 +29,15 @@ function Rule([string]$a, [string]$r, [string]$e) { [ordered]@{ action = $a; res
 # --- modèles du registre
 $reg = [IO.File]::ReadAllText((Join-Path $Root 'models\registry.yaml'), $Utf8)
 $models = [ordered]@{}; $idToTag = @{}
+$ReasoningEffort = @{ 'qwen3.5' = 'none'; 'gpt-oss' = 'low' }   # qwen2.5-coder, qwen3-coder : pas de mode thinking
 foreach ($b in ([regex]::Split($reg, '(?m)^\s*-\s+id:\s*') | Select-Object -Skip 1)) {
     $id = ($b -split '\s')[0]; $tag = Get-Val $b 'tag'
     $idToTag[$id] = $tag
     $models[$tag] = [ordered]@{ name = "$tag (local)"; limit = [ordered]@{ context = $MaxCtx; output = 4096 } }
+    # 9.B.2 : raisonnement (thinking) réglé comme en 6.B.1 (models/benchmarks/suite.yaml, section thinking). Sans ce réglage,
+    # qwen3.5 raisonne par défaut via /v1 (jusqu'à 4096 tokens à ~7 tok/s sur CPU) : aucune réponse visible pendant des minutes.
+    $fam = ($tag -split ':')[0]
+    if ($ReasoningEffort.ContainsKey($fam)) { $models[$tag].body = [ordered]@{ reasoning_effort = $ReasoningEffort[$fam] } }
 }
 
 # --- agents (Continue exclu : autocomplétion hors OpenCode)

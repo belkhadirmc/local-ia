@@ -48,3 +48,26 @@ Sauvegarde BK1 préalable : `backups/restore-points/9.B.1_20261126_135507` (agen
 | `agent model documentalist` puis `agent reset` (définition, variante, API, BK1) ; 0 écart aux affectations initiales | PASS |
 
 Sessions de test supprimées (titres `9B1-*` et sous-session) ; sessions préexistantes conservées. Aucun modèle chargé à la fin.
+
+## Correctif 9.B.2 — sessions Web sans réponse
+
+- **Symptôme** : nouvelle session Web (« Bonjour ») indéfiniment en attente, RAM qui monte selon le modèle, aucune réponse.
+- **Cause réelle** : les modèles **qwen3.5** raisonnent (*thinking*) par défaut via l'API compatible OpenAI d'Ollama ; OpenCode
+  n'envoyait aucun réglage de raisonnement. Chaque requête (réponse **et** génération du titre de session) pouvait produire jusqu'à
+  4096 tokens de raisonnement à ~7 tok/s sur CPU (≈ 9 min), en file unique (`OLLAMA_NUM_PARALLEL=1`) : rien ne s'affichait, les
+  sessions étaient interrompues par l'utilisateur (« Step interrupted »). Journaux : requêtes de 8 à 14 min (`/v1/chat/completions`),
+  aucun `firstToken` dans les messages. Comparaison directe : « Bonjour » sans réglage = 451 tokens de raisonnement ;
+  avec `reasoning_effort: "none"` = 12 tokens, **2 s**.
+- **Correctif minimal** (générateur, `providers.ollama.models.<tag>.body`) : `reasoning_effort: "none"` pour `qwen3.5:*`,
+  `"low"` pour `gpt-oss:20b` — mêmes réglages que les benchmarks validés (6.B.1, `suite.yaml`). Aucun changement d'affectation,
+  de permission ni de réseau. Sauvegarde : `backups/restore-points/9.B.2_20261126_145830` ; retour arrière : recopier
+  `config/opencode/` depuis ce point puis redémarrer `opencode`.
+- **Vérification (réponse complète via le serveur OpenCode, même chemin que le Web)** :
+
+| Cas (qwen3.5:4b, agent assistant) | Avant | Après |
+|---|---|---|
+| Nouvelle session, modèle froid (prompt système ≈ 2 840 tokens à traiter sur CPU) | aucune réponse (8 à 14 min) | 109 s, réponse complète, 0 token de raisonnement |
+| Message suivant, même session | — | 12 s |
+| Nouvelle session, modèle chaud (cache du prompt) | — | 9 s |
+
+Sessions existantes de l'utilisateur conservées ; sessions de test supprimées ; aucun modèle chargé ensuite. Réserve R13.
