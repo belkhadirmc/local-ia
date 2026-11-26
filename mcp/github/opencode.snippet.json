@@ -1,0 +1,9 @@
+{
+  "github": {
+    "type": "remote",
+    "url": "http://mcp-github:8080/mcp",
+    "disabled": true,
+    "oauth": false,
+    "headers": { "Authorization": "Bearer {env:LOCAL_AI_MCP_RELAY_TOKEN}" }
+  }
+}

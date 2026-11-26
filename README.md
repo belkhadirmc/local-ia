@@ -1,17 +1,19 @@
 # local-ai
 
 Infrastructure de développement multi-agent locale : Docker Desktop (WSL2), Ollama, OpenCode, Continue, VS Code.
-État (5.B.1) : **Ollama 0.40.18** (CPU, réseau interne, aucun port publié) avec **7 modèles** téléchargés et testés hors ligne (52,98 Gio, aucun chargé au repos).
+État (7.B.1) : **Ollama 0.40.18** (CPU, réseau interne, aucun port publié) avec **7 modèles** (52,98 Gio, aucun chargé au repos, benchmarks 6.B.1) ;
+**OpenCode 2.3.2** sur `http://127.0.0.1:4096` (authentification locale, sans accès Internet, fournisseur Ollama interne uniquement) ;
+MCP GitHub, GitLab, Jira, Confluence **préparés et désactivés**.
 
 ## Arborescence
 
 | Dossier | Rôle |
 |---|---|
-| `compose/` | `services/` socle inclus, `templates/` modules inactifs, `overrides/` surcharges sur autorisation |
+| `compose/` | `services/` socle inclus, `templates/` modules (ollama et opencode actifs), `overrides/` surcharges sur autorisation |
 | `config/` | Ollama, OpenCode, Continue, réseau, sécurité, supervision |
 | `agents/` | définitions YAML indépendantes d'OpenCode, prompts, catalogue d'outils |
 | `models/` | registre des modèles, benchmarks |
-| `mcp/` | registre et modèles GitHub, GitLab, Jira, Confluence (désactivés) |
+| `mcp/` | registre et serveurs officiels GitHub, GitLab, Jira, Confluence (préparés, désactivés) |
 | `profiles/` | performance A/B/C, réseau N1-N4, sécurité S1-S4, sauvegarde BK1-BK3 |
 | `scripts/` | lifecycle, profils, supervision, maintenance, sauvegarde (à venir) |
 | `projects/` | projets indépendants (non suivis), `templates/` suivis |
@@ -25,13 +27,15 @@ Infrastructure de développement multi-agent locale : Docker Desktop (WSL2), Oll
 .\local-ai.ps1 help      # aide
 .\local-ai.ps1 status    # état en lecture seule
 .\local-ai.ps1 config    # validation de la configuration
-.\local-ai.ps1 start [ollama]   # validation préalable puis démarrage, sans téléchargement implicite
-.\local-ai.ps1 stop [ollama]    # arrêt sans suppression (conteneurs, réseau, volume conservés)
-.\local-ai.ps1 model list       # modèles présents vs registre
-.\local-ai.ps1 model show <tag> # détails d'un modèle référencé
+.\local-ai.ps1 start [ollama|opencode]   # validation préalable puis démarrage, sans téléchargement implicite
+.\local-ai.ps1 stop [ollama|opencode]    # arrêt sans suppression (conteneurs, réseau, volume conservés)
+.\local-ai.ps1 tui                       # interface terminal OpenCode (Web : http://127.0.0.1:4096, utilisateur opencode)
+.\local-ai.ps1 model list                # modèles présents vs registre
+.\local-ai.ps1 model show <tag>          # détails d'un modèle référencé
+.\local-ai.ps1 mcp list|status           # serveurs MCP préparés (enable refusé tant que N4 non implémenté)
 ```
 
-Les autres commandes (`profile`, `agent`, `mcp`, `monitor`, `permissions`,
+Mot de passe Web/API : `secrets/opencode.env` (non versionné). Les autres commandes (`profile`, `agent`, `monitor`, `permissions`,
 `backup`, `restore`, `maintenance`, `emergency-stop`) sont prévues et échouent explicitement tant qu'elles ne sont pas implémentées.
 
 ## Profils par défaut

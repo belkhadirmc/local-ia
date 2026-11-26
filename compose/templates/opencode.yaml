@@ -1,24 +1,134 @@
-# MODÈLE INACTIF — OpenCode (serveur, port 4096). Activation : image construite ou épinglée,
-# chemins de données confirmés, volume local-ai-opencode provisionné, agents convertis.
+# MODULE OpenCode — ACTIVÉ en 7.B.1 via include dans compose.yaml (profil Compose "opencode").
+# Image validée : ghcr.io/anomalyco/opencode:2.3.2@sha256:43d4d0fb…ff22 (linux/amd64), voir .env / ADR-0007.
+# Sécurité : UID/GID 1000, cap_drop ALL, Seccomp par défaut, no-new-privileges, racine en lecture seule,
+# aucun socket Docker, aucun montage Windows hormis le fichier de configuration (lecture seule).
+# Réseau (R1, ADR-0007) : sous Docker Desktop, un pont non interne donne accès à Internet même avec
+# enable_ip_masquerade=false, et un réseau interne ne publie aucun port. Montage retenu :
+#   opencode-net   : porteur de l'espace réseau (local-ai-core + local-ai-localhost, port 127.0.0.1:4096), uid 1000, sans capacité ;
+#   egress-guard   : éphémère, root + NET_ADMIN SEUL, dans l'espace réseau d'opencode-net : supprime les routes par défaut
+#                    puis VÉRIFIE l'échec d'une connexion Internet (échec fermé : opencode ne démarre pas sinon) ;
+#   opencode       : partage l'espace réseau d'opencode-net (network_mode service:), healthcheck = API + absence de route par défaut.
+# Seuls les sous-réseaux directement connectés restent joignables (ollama, réponses au port publié).
+# Authentification : Basic (utilisateur "opencode"), mot de passe dans secrets/opencode.env (hors Git).
+x-opencode-logging: &opencode-logging
+  driver: local
+  options:
+    max-size: "10m"
+    max-file: "5"
+    compress: "true"
+
 services:
+  opencode-init:
+    image: ${OPENCODE_IMAGE_REPO:?OPENCODE_IMAGE_REPO requis}:${OPENCODE_IMAGE_TAG:?OPENCODE_IMAGE_TAG requis (version explicite)}@sha256:${OPENCODE_IMAGE_SHA256:?OPENCODE_IMAGE_SHA256 requis (64 hex)}
+    profiles: [opencode]
+    restart: "no"
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c", "mkdir -p /data/workspace && chown 1000:1000 /data /data/workspace"]
+    command: []
+    network_mode: none
+    volumes:
+      - local-ai-opencode:/data
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [CHOWN]
+    security_opt:
+      - no-new-privileges:true
+    logging: *opencode-logging
+
+  opencode-net:
+    image: ${OPENCODE_IMAGE_REPO:?OPENCODE_IMAGE_REPO requis}:${OPENCODE_IMAGE_TAG:?OPENCODE_IMAGE_TAG requis (version explicite)}@sha256:${OPENCODE_IMAGE_SHA256:?OPENCODE_IMAGE_SHA256 requis (64 hex)}
+    profiles: [opencode]
+    restart: "no"
+    user: "1000:1000"
+    entrypoint: ["/bin/busybox", "sleep", "2147483647"]
+    command: []
+    networks: [local-ai-core, local-ai-localhost]
+    ports:
+      - "127.0.0.1:4096:4096"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 32m
+    pids_limit: 8
+    healthcheck:
+      test: ["CMD", "/bin/sh", "-c", "! /bin/busybox ip route | grep -q '^default' && ! /bin/busybox ip -6 route | grep -q '^default'"]
+      interval: 30s
+      timeout: 5s
+      retries: 1
+      start_period: 20s
+      start_interval: 2s
+    logging: *opencode-logging
+
+  egress-guard:
+    image: ${OPENCODE_IMAGE_REPO:?OPENCODE_IMAGE_REPO requis}:${OPENCODE_IMAGE_TAG:?OPENCODE_IMAGE_TAG requis (version explicite)}@sha256:${OPENCODE_IMAGE_SHA256:?OPENCODE_IMAGE_SHA256 requis (64 hex)}
+    profiles: [opencode]
+    restart: "no"
+    user: "0:0"
+    depends_on:
+      opencode-net:
+        condition: service_started
+    network_mode: "service:opencode-net"
+    entrypoint:
+      - /bin/sh
+      - -c
+      - >-
+        ip route del default 2>/dev/null; ip -6 route del default 2>/dev/null;
+        if ip route | grep -q '^default' || ip -6 route | grep -q '^default'; then echo 'route par défaut présente'; exit 1; fi;
+        if wget -q -T 4 -O /dev/null http://1.1.1.1/ 2>/dev/null; then echo 'sortie Internet possible'; exit 1; fi;
+        echo 'sortie Internet bloquée'
+    command: []
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [NET_ADMIN]
+    security_opt:
+      - no-new-privileges:true
+    logging: *opencode-logging
+
   opencode:
     image: ${OPENCODE_IMAGE_REPO:?OPENCODE_IMAGE_REPO requis}:${OPENCODE_IMAGE_TAG:?OPENCODE_IMAGE_TAG requis (version explicite)}@sha256:${OPENCODE_IMAGE_SHA256:?OPENCODE_IMAGE_SHA256 requis (64 hex)}
     profiles: [opencode]
     restart: "no"
-    user: "${LOCAL_AI_UID:-1000}:${LOCAL_AI_GID:-1000}"
-    networks: [local-ai-core]
-    environment:
-      OLLAMA_BASE_URL: http://ollama:11434
+    user: "1000:1000"
+    depends_on:
+      opencode-init:
+        condition: service_completed_successfully
+      egress-guard:
+        condition: service_completed_successfully
+      opencode-net:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+        required: false
+    command: ["serve", "--hostname", "0.0.0.0", "--port", "4096"]
+    working_dir: /data/workspace
+    env_file:
+      - path: ../../config/opencode/opencode.env
+        required: true
+      - path: ../../secrets/opencode.env
+        required: true
+    network_mode: "service:opencode-net"
     volumes:
-      - local-ai-opencode:/data/opencode   # chemin à confirmer selon l'image retenue
+      - local-ai-opencode:/data
+      - type: bind
+        source: ../../config/opencode/opencode.json
+        target: /etc/opencode/opencode.json
+        read_only: true
     read_only: true
     tmpfs:
-      - /tmp:size=256m
+      - /tmp:size=256m,uid=1000,gid=1000,mode=0700
     cap_drop: [ALL]
     security_opt:
       - no-new-privileges:true
-    expose:
-      - "4096"
+    mem_limit: 2g
+    pids_limit: 512
+    healthcheck:
+      test: ["CMD", "/bin/sh", "-c", "! ip route | grep -q '^default' && wget -q -O /dev/null --header \"Authorization: Basic $$(printf 'opencode:%s' \"$$OPENCODE_PASSWORD\" | base64 -w 0)\" http://127.0.0.1:4096/api/info"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging: *opencode-logging
 
 networks:
   local-ai-core:
@@ -28,6 +138,15 @@ networks:
     labels:
       local-ai.network: core
       local-ai.authorization: none
+  local-ai-localhost:
+    name: local-ai-localhost
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: "false"
+      com.docker.network.bridge.host_binding_ipv4: "127.0.0.1"
+    labels:
+      local-ai.network: localhost
+      local-ai.authorization: required
 
 volumes:
   local-ai-opencode:

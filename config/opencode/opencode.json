@@ -1,0 +1,1172 @@
+{
+    "$schema":  "https://opencode.ai/config.json",
+    "model":  "ollama/qwen3.5:4b-q4_K_M",
+    "default_agent":  "assistant",
+    "update":  "disable",
+    "share":  "disabled",
+    "websearch":  false,
+    "lsp":  false,
+    "formatter":  false,
+    "providers":  {
+                      "ollama":  {
+                                     "name":  "Ollama (local-ai, interne)",
+                                     "settings":  {
+                                                      "baseURL":  "http://ollama:11434/v1"
+                                                  },
+                                     "models":  {
+                                                    "qwen2.5-coder:1.5b":  {
+                                                                               "name":  "qwen2.5-coder:1.5b (local)",
+                                                                               "limit":  {
+                                                                                             "context":  8192,
+                                                                                             "output":  4096
+                                                                                         }
+                                                                           },
+                                                    "qwen3.5:4b-q4_K_M":  {
+                                                                              "name":  "qwen3.5:4b-q4_K_M (local)",
+                                                                              "limit":  {
+                                                                                            "context":  8192,
+                                                                                            "output":  4096
+                                                                                        }
+                                                                          },
+                                                    "qwen2.5-coder:7b":  {
+                                                                             "name":  "qwen2.5-coder:7b (local)",
+                                                                             "limit":  {
+                                                                                           "context":  8192,
+                                                                                           "output":  4096
+                                                                                       }
+                                                                         },
+                                                    "qwen3.5:9b-q4_K_M":  {
+                                                                              "name":  "qwen3.5:9b-q4_K_M (local)",
+                                                                              "limit":  {
+                                                                                            "context":  8192,
+                                                                                            "output":  4096
+                                                                                        }
+                                                                          },
+                                                    "qwen2.5-coder:14b":  {
+                                                                              "name":  "qwen2.5-coder:14b (local)",
+                                                                              "limit":  {
+                                                                                            "context":  8192,
+                                                                                            "output":  4096
+                                                                                        }
+                                                                          },
+                                                    "gpt-oss:20b":  {
+                                                                        "name":  "gpt-oss:20b (local)",
+                                                                        "limit":  {
+                                                                                      "context":  8192,
+                                                                                      "output":  4096
+                                                                                  }
+                                                                    },
+                                                    "qwen3-coder:30b":  {
+                                                                            "name":  "qwen3-coder:30b (local)",
+                                                                            "limit":  {
+                                                                                          "context":  8192,
+                                                                                          "output":  4096
+                                                                                      }
+                                                                        }
+                                                }
+                                 }
+                  },
+    "policies":  [
+                     {
+                         "action":  "provider.use",
+                         "resource":  "*",
+                         "effect":  "deny"
+                     },
+                     {
+                         "action":  "provider.use",
+                         "resource":  "ollama",
+                         "effect":  "allow"
+                     },
+                     {
+                         "action":  "websearch.use",
+                         "resource":  "*",
+                         "effect":  "deny"
+                     },
+                     {
+                         "action":  "mcp.use",
+                         "resource":  "*",
+                         "effect":  "deny"
+                     },
+                     {
+                         "action":  "integration.connect",
+                         "resource":  "*",
+                         "effect":  "deny"
+                     },
+                     {
+                         "action":  "integration.use",
+                         "resource":  "*",
+                         "effect":  "deny"
+                     },
+                     {
+                         "action":  "integration.connect",
+                         "resource":  "ollama",
+                         "effect":  "allow"
+                     },
+                     {
+                         "action":  "integration.use",
+                         "resource":  "ollama",
+                         "effect":  "allow"
+                     }
+                 ],
+    "permissions":  [
+                        {
+                            "action":  "*",
+                            "resource":  "*",
+                            "effect":  "ask"
+                        },
+                        {
+                            "action":  "read",
+                            "resource":  "*",
+                            "effect":  "allow"
+                        },
+                        {
+                            "action":  "glob",
+                            "resource":  "*",
+                            "effect":  "allow"
+                        },
+                        {
+                            "action":  "grep",
+                            "resource":  "*",
+                            "effect":  "allow"
+                        },
+                        {
+                            "action":  "webfetch",
+                            "resource":  "*",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "websearch",
+                            "resource":  "*",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "external_directory",
+                            "resource":  "*",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "shell",
+                            "resource":  "git push*",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "shell",
+                            "resource":  "sudo *",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "read",
+                            "resource":  "*.env",
+                            "effect":  "deny"
+                        },
+                        {
+                            "action":  "read",
+                            "resource":  "*secrets*",
+                            "effect":  "deny"
+                        }
+                    ],
+    "mcp":  {
+                "servers":  {
+
+                            }
+            },
+    "agents":  {
+                   "architect":  {
+                                     "description":  "Architecte — Conçoit l'architecture, découpe les tâches et délègue.",
+                                     "mode":  "all",
+                                     "model":  "ollama/gpt-oss:20b",
+                                     "system":  "# Architecte\n\nConçoit l'architecture, découpe les tâches et délègue.\n\n- Respecte le profil de sécurité actif (défaut S2) et les permissions de la définition.\n- Travaille uniquement dans le workspace du projet ; ne lis ni ne modifie `secrets/`.\n- Signale toute incertitude au lieu d'inventer (versions, API, résultats).\n- Réponds en français, de façon concise.",
+                                     "permissions":  [
+                                                         {
+                                                             "action":  "*",
+                                                             "resource":  "*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "question",
+                                                             "resource":  "*",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "read",
+                                                             "resource":  "*",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "grep",
+                                                             "resource":  "*",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "glob",
+                                                             "resource":  "*",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "git status*",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "git diff*",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "git log*",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "git show*",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "subagent",
+                                                             "resource":  "developer",
+                                                             "effect":  "ask"
+                                                         },
+                                                         {
+                                                             "action":  "subagent",
+                                                             "resource":  "devops",
+                                                             "effect":  "ask"
+                                                         },
+                                                         {
+                                                             "action":  "subagent",
+                                                             "resource":  "reviewer",
+                                                             "effect":  "ask"
+                                                         },
+                                                         {
+                                                             "action":  "subagent",
+                                                             "resource":  "security",
+                                                             "effect":  "ask"
+                                                         },
+                                                         {
+                                                             "action":  "subagent",
+                                                             "resource":  "documentalist",
+                                                             "effect":  "ask"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "git push*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "sudo *",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "curl *",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "wget *",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "webfetch",
+                                                             "resource":  "*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "websearch",
+                                                             "resource":  "*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "external_directory",
+                                                             "resource":  "*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "read",
+                                                             "resource":  "*.env",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "read",
+                                                             "resource":  "*secrets*",
+                                                             "effect":  "deny"
+                                                         }
+                                                     ]
+                                 },
+                   "assistant":  {
+                                     "description":  "Assistant — Répond aux questions courantes et oriente vers l'agent adapté.",
+                                     "mode":  "all",
+                                     "model":  "ollama/qwen3.5:4b-q4_K_M",
+                                     "system":  "# Assistant\n\nRépond aux questions courantes et oriente vers l'agent adapté.\n\n- Respecte le profil de sécurité actif (défaut S2) et les permissions de la définition.\n- Travaille uniquement dans le workspace du projet ; ne lis ni ne modifie `secrets/`.\n- Signale toute incertitude au lieu d'inventer (versions, API, résultats).\n- Réponds en français, de façon concise.",
+                                     "permissions":  [
+                                                         {
+                                                             "action":  "*",
+                                                             "resource":  "*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "question",
+                                                             "resource":  "*",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "read",
+                                                             "resource":  "*",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "grep",
+                                                             "resource":  "*",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "glob",
+                                                             "resource":  "*",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "subagent",
+                                                             "resource":  "architect",
+                                                             "effect":  "ask"
+                                                         },
+                                                         {
+                                                             "action":  "subagent",
+                                                             "resource":  "developer",
+                                                             "effect":  "ask"
+                                                         },
+                                                         {
+                                                             "action":  "subagent",
+                                                             "resource":  "documentalist",
+                                                             "effect":  "ask"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "git push*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "sudo *",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "curl *",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "wget *",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "webfetch",
+                                                             "resource":  "*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "websearch",
+                                                             "resource":  "*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "external_directory",
+                                                             "resource":  "*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "read",
+                                                             "resource":  "*.env",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "read",
+                                                             "resource":  "*secrets*",
+                                                             "effect":  "deny"
+                                                         }
+                                                     ]
+                                 },
+                   "debugger":  {
+                                    "description":  "Debugger — Reproduit, diagnostique et corrige les anomalies.",
+                                    "mode":  "all",
+                                    "model":  "ollama/qwen2.5-coder:14b",
+                                    "system":  "# Debugger\n\nReproduit, diagnostique et corrige les anomalies.\n\n- Respecte le profil de sécurité actif (défaut S2) et les permissions de la définition.\n- Travaille uniquement dans le workspace du projet ; ne lis ni ne modifie `secrets/`.\n- Signale toute incertitude au lieu d'inventer (versions, API, résultats).\n- Réponds en français, de façon concise.",
+                                    "permissions":  [
+                                                        {
+                                                            "action":  "*",
+                                                            "resource":  "*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "question",
+                                                            "resource":  "*",
+                                                            "effect":  "allow"
+                                                        },
+                                                        {
+                                                            "action":  "read",
+                                                            "resource":  "*",
+                                                            "effect":  "allow"
+                                                        },
+                                                        {
+                                                            "action":  "grep",
+                                                            "resource":  "*",
+                                                            "effect":  "allow"
+                                                        },
+                                                        {
+                                                            "action":  "glob",
+                                                            "resource":  "*",
+                                                            "effect":  "allow"
+                                                        },
+                                                        {
+                                                            "action":  "edit",
+                                                            "resource":  "*",
+                                                            "effect":  "ask"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "*",
+                                                            "effect":  "ask"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "git status*",
+                                                            "effect":  "allow"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "git diff*",
+                                                            "effect":  "allow"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "git log*",
+                                                            "effect":  "allow"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "git show*",
+                                                            "effect":  "allow"
+                                                        },
+                                                        {
+                                                            "action":  "subagent",
+                                                            "resource":  "qa",
+                                                            "effect":  "ask"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "git push*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "sudo *",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "curl *",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "wget *",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "webfetch",
+                                                            "resource":  "*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "websearch",
+                                                            "resource":  "*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "external_directory",
+                                                            "resource":  "*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "read",
+                                                            "resource":  "*.env",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "read",
+                                                            "resource":  "*secrets*",
+                                                            "effect":  "deny"
+                                                        }
+                                                    ]
+                                },
+                   "developer":  {
+                                     "description":  "Développeur — Implémente les fonctionnalités demandées avec tests.",
+                                     "mode":  "all",
+                                     "model":  "ollama/qwen3-coder:30b",
+                                     "system":  "# Développeur\n\nImplémente les fonctionnalités demandées avec tests.\n\n- Respecte le profil de sécurité actif (défaut S2) et les permissions de la définition.\n- Travaille uniquement dans le workspace du projet ; ne lis ni ne modifie `secrets/`.\n- Signale toute incertitude au lieu d'inventer (versions, API, résultats).\n- Réponds en français, de façon concise.",
+                                     "permissions":  [
+                                                         {
+                                                             "action":  "*",
+                                                             "resource":  "*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "question",
+                                                             "resource":  "*",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "read",
+                                                             "resource":  "*",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "grep",
+                                                             "resource":  "*",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "glob",
+                                                             "resource":  "*",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "edit",
+                                                             "resource":  "*",
+                                                             "effect":  "ask"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "*",
+                                                             "effect":  "ask"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "git status*",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "git diff*",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "git log*",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "git show*",
+                                                             "effect":  "allow"
+                                                         },
+                                                         {
+                                                             "action":  "subagent",
+                                                             "resource":  "qa",
+                                                             "effect":  "ask"
+                                                         },
+                                                         {
+                                                             "action":  "subagent",
+                                                             "resource":  "debugger",
+                                                             "effect":  "ask"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "git push*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "sudo *",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "curl *",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "shell",
+                                                             "resource":  "wget *",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "webfetch",
+                                                             "resource":  "*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "websearch",
+                                                             "resource":  "*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "external_directory",
+                                                             "resource":  "*",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "read",
+                                                             "resource":  "*.env",
+                                                             "effect":  "deny"
+                                                         },
+                                                         {
+                                                             "action":  "read",
+                                                             "resource":  "*secrets*",
+                                                             "effect":  "deny"
+                                                         }
+                                                     ]
+                                 },
+                   "devops":  {
+                                  "description":  "DevOps — Gère Compose, CI, scripts et configuration d'exécution.",
+                                  "mode":  "all",
+                                  "model":  "ollama/qwen3-coder:30b",
+                                  "system":  "# DevOps\n\nGère Compose, CI, scripts et configuration d'exécution.\n\n- Respecte le profil de sécurité actif (défaut S2) et les permissions de la définition.\n- Travaille uniquement dans le workspace du projet ; ne lis ni ne modifie `secrets/`.\n- Signale toute incertitude au lieu d'inventer (versions, API, résultats).\n- Réponds en français, de façon concise.",
+                                  "permissions":  [
+                                                      {
+                                                          "action":  "*",
+                                                          "resource":  "*",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "question",
+                                                          "resource":  "*",
+                                                          "effect":  "allow"
+                                                      },
+                                                      {
+                                                          "action":  "read",
+                                                          "resource":  "*",
+                                                          "effect":  "allow"
+                                                      },
+                                                      {
+                                                          "action":  "grep",
+                                                          "resource":  "*",
+                                                          "effect":  "allow"
+                                                      },
+                                                      {
+                                                          "action":  "glob",
+                                                          "resource":  "*",
+                                                          "effect":  "allow"
+                                                      },
+                                                      {
+                                                          "action":  "edit",
+                                                          "resource":  "*",
+                                                          "effect":  "ask"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "*",
+                                                          "effect":  "ask"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "git status*",
+                                                          "effect":  "allow"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "git diff*",
+                                                          "effect":  "allow"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "git log*",
+                                                          "effect":  "allow"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "git show*",
+                                                          "effect":  "allow"
+                                                      },
+                                                      {
+                                                          "action":  "subagent",
+                                                          "resource":  "security",
+                                                          "effect":  "ask"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "git push*",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "sudo *",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "curl *",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "shell",
+                                                          "resource":  "wget *",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "webfetch",
+                                                          "resource":  "*",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "websearch",
+                                                          "resource":  "*",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "external_directory",
+                                                          "resource":  "*",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "read",
+                                                          "resource":  "*.env",
+                                                          "effect":  "deny"
+                                                      },
+                                                      {
+                                                          "action":  "read",
+                                                          "resource":  "*secrets*",
+                                                          "effect":  "deny"
+                                                      }
+                                                  ]
+                              },
+                   "documentalist":  {
+                                         "description":  "Documentaliste — Rédige et met à jour la documentation.",
+                                         "mode":  "all",
+                                         "model":  "ollama/qwen3.5:9b-q4_K_M",
+                                         "system":  "# Documentaliste\n\nRédige et met à jour la documentation.\n\n- Respecte le profil de sécurité actif (défaut S2) et les permissions de la définition.\n- Travaille uniquement dans le workspace du projet ; ne lis ni ne modifie `secrets/`.\n- Signale toute incertitude au lieu d'inventer (versions, API, résultats).\n- Réponds en français, de façon concise.",
+                                         "permissions":  [
+                                                             {
+                                                                 "action":  "*",
+                                                                 "resource":  "*",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "question",
+                                                                 "resource":  "*",
+                                                                 "effect":  "allow"
+                                                             },
+                                                             {
+                                                                 "action":  "read",
+                                                                 "resource":  "*",
+                                                                 "effect":  "allow"
+                                                             },
+                                                             {
+                                                                 "action":  "grep",
+                                                                 "resource":  "*",
+                                                                 "effect":  "allow"
+                                                             },
+                                                             {
+                                                                 "action":  "glob",
+                                                                 "resource":  "*",
+                                                                 "effect":  "allow"
+                                                             },
+                                                             {
+                                                                 "action":  "edit",
+                                                                 "resource":  "*",
+                                                                 "effect":  "ask"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "git status*",
+                                                                 "effect":  "allow"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "git diff*",
+                                                                 "effect":  "allow"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "git log*",
+                                                                 "effect":  "allow"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "git show*",
+                                                                 "effect":  "allow"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "git push*",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "sudo *",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "curl *",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "shell",
+                                                                 "resource":  "wget *",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "webfetch",
+                                                                 "resource":  "*",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "websearch",
+                                                                 "resource":  "*",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "external_directory",
+                                                                 "resource":  "*",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "read",
+                                                                 "resource":  "*.env",
+                                                                 "effect":  "deny"
+                                                             },
+                                                             {
+                                                                 "action":  "read",
+                                                                 "resource":  "*secrets*",
+                                                                 "effect":  "deny"
+                                                             }
+                                                         ]
+                                     },
+                   "qa":  {
+                              "description":  "QA — Écrit et exécute les tests, rapporte la couverture.",
+                              "mode":  "all",
+                              "model":  "ollama/qwen2.5-coder:7b",
+                              "system":  "# QA\n\nÉcrit et exécute les tests, rapporte la couverture.\n\n- Respecte le profil de sécurité actif (défaut S2) et les permissions de la définition.\n- Travaille uniquement dans le workspace du projet ; ne lis ni ne modifie `secrets/`.\n- Signale toute incertitude au lieu d'inventer (versions, API, résultats).\n- Réponds en français, de façon concise.",
+                              "permissions":  [
+                                                  {
+                                                      "action":  "*",
+                                                      "resource":  "*",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "question",
+                                                      "resource":  "*",
+                                                      "effect":  "allow"
+                                                  },
+                                                  {
+                                                      "action":  "read",
+                                                      "resource":  "*",
+                                                      "effect":  "allow"
+                                                  },
+                                                  {
+                                                      "action":  "grep",
+                                                      "resource":  "*",
+                                                      "effect":  "allow"
+                                                  },
+                                                  {
+                                                      "action":  "glob",
+                                                      "resource":  "*",
+                                                      "effect":  "allow"
+                                                  },
+                                                  {
+                                                      "action":  "edit",
+                                                      "resource":  "*",
+                                                      "effect":  "ask"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "npm test*",
+                                                      "effect":  "ask"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "pytest*",
+                                                      "effect":  "ask"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "python -m pytest*",
+                                                      "effect":  "ask"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "go test*",
+                                                      "effect":  "ask"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "cargo test*",
+                                                      "effect":  "ask"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "make test*",
+                                                      "effect":  "ask"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "bash -n *",
+                                                      "effect":  "ask"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "git status*",
+                                                      "effect":  "allow"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "git diff*",
+                                                      "effect":  "allow"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "git log*",
+                                                      "effect":  "allow"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "git show*",
+                                                      "effect":  "allow"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "git push*",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "sudo *",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "curl *",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "shell",
+                                                      "resource":  "wget *",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "webfetch",
+                                                      "resource":  "*",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "websearch",
+                                                      "resource":  "*",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "external_directory",
+                                                      "resource":  "*",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "read",
+                                                      "resource":  "*.env",
+                                                      "effect":  "deny"
+                                                  },
+                                                  {
+                                                      "action":  "read",
+                                                      "resource":  "*secrets*",
+                                                      "effect":  "deny"
+                                                  }
+                                              ]
+                          },
+                   "reviewer":  {
+                                    "description":  "Reviewer — Relit le code et les diffs, signale défauts et risques sans modifier.",
+                                    "mode":  "all",
+                                    "model":  "ollama/gpt-oss:20b",
+                                    "system":  "# Reviewer\n\nRelit le code et les diffs, signale défauts et risques sans modifier.\n\n- Respecte le profil de sécurité actif (défaut S2) et les permissions de la définition.\n- Travaille uniquement dans le workspace du projet ; ne lis ni ne modifie `secrets/`.\n- Signale toute incertitude au lieu d'inventer (versions, API, résultats).\n- Réponds en français, de façon concise.",
+                                    "permissions":  [
+                                                        {
+                                                            "action":  "*",
+                                                            "resource":  "*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "question",
+                                                            "resource":  "*",
+                                                            "effect":  "allow"
+                                                        },
+                                                        {
+                                                            "action":  "read",
+                                                            "resource":  "*",
+                                                            "effect":  "allow"
+                                                        },
+                                                        {
+                                                            "action":  "grep",
+                                                            "resource":  "*",
+                                                            "effect":  "allow"
+                                                        },
+                                                        {
+                                                            "action":  "glob",
+                                                            "resource":  "*",
+                                                            "effect":  "allow"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "git status*",
+                                                            "effect":  "allow"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "git diff*",
+                                                            "effect":  "allow"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "git log*",
+                                                            "effect":  "allow"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "git show*",
+                                                            "effect":  "allow"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "git push*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "sudo *",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "curl *",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "wget *",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "webfetch",
+                                                            "resource":  "*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "websearch",
+                                                            "resource":  "*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "external_directory",
+                                                            "resource":  "*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "read",
+                                                            "resource":  "*.env",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "read",
+                                                            "resource":  "*secrets*",
+                                                            "effect":  "deny"
+                                                        }
+                                                    ]
+                                },
+                   "security":  {
+                                    "description":  "Sécurité — Audite sécurité, dépendances, secrets et configuration.",
+                                    "mode":  "all",
+                                    "model":  "ollama/gpt-oss:20b",
+                                    "system":  "# Sécurité\n\nAudite sécurité, dépendances, secrets et configuration.\n\n- Respecte le profil de sécurité actif (défaut S2) et les permissions de la définition.\n- Travaille uniquement dans le workspace du projet ; ne lis ni ne modifie `secrets/`.\n- Signale toute incertitude au lieu d'inventer (versions, API, résultats).\n- Réponds en français, de façon concise.",
+                                    "permissions":  [
+                                                        {
+                                                            "action":  "*",
+                                                            "resource":  "*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "question",
+                                                            "resource":  "*",
+                                                            "effect":  "allow"
+                                                        },
+                                                        {
+                                                            "action":  "read",
+                                                            "resource":  "*",
+                                                            "effect":  "allow"
+                                                        },
+                                                        {
+                                                            "action":  "grep",
+                                                            "resource":  "*",
+                                                            "effect":  "allow"
+                                                        },
+                                                        {
+                                                            "action":  "glob",
+                                                            "resource":  "*",
+                                                            "effect":  "allow"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "git status*",
+                                                            "effect":  "allow"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "git diff*",
+                                                            "effect":  "allow"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "git log*",
+                                                            "effect":  "allow"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "git show*",
+                                                            "effect":  "allow"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "git push*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "sudo *",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "curl *",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "shell",
+                                                            "resource":  "wget *",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "webfetch",
+                                                            "resource":  "*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "websearch",
+                                                            "resource":  "*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "external_directory",
+                                                            "resource":  "*",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "read",
+                                                            "resource":  "*.env",
+                                                            "effect":  "deny"
+                                                        },
+                                                        {
+                                                            "action":  "read",
+                                                            "resource":  "*secrets*",
+                                                            "effect":  "deny"
+                                                        }
+                                                    ]
+                                }
+               }
+}

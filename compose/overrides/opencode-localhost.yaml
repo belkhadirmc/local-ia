@@ -1,4 +1,5 @@
-# SURCHARGE — exposition de opencode sur 127.0.0.1:4096 uniquement (si nécessaire).
+# SURCHARGE OBSOLÈTE (7.B.1) — insuffisante seule : enable_ip_masquerade=false ne bloque pas la sortie sous Docker Desktop (R1).
+# Le module compose/templates/opencode.yaml publie 127.0.0.1:4096 via opencode-net + egress-guard ; conservée pour les tests de structure.
 # Un réseau interne ne permet pas la publication de ports : un pont dédié sans NAT sortant
 # (enable_ip_masquerade=false) est utilisé. Comportement à tester lors du déploiement.
 # AVERTISSEMENT : la liaison 127.0.0.1 limite l'EXPOSITION entrante ; elle ne garantit PAS le blocage

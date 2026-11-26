@@ -13,6 +13,7 @@ secrets/*
 !.env.example
 !**/.env.example
 !config/ollama/ollama.env
+!config/opencode/opencode.env
 *.pem
 *.key
 *.p12

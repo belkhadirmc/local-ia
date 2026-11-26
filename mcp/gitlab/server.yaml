@@ -1,13 +1,26 @@
-# Serveur MCP GitLab — MODÈLE désactivé.
+# Serveur MCP GitLab — PRÉPARÉ, DÉSACTIVÉ (7.B.1). Source : docs.gitlab.com/user/gitlab_duo/model_context_protocol/mcp_server/
 schema: local-ai/mcp-server/v1
 id: gitlab
 name: GitLab
 enabled: false
-status: template
-image: null
-transport: null
-image_note: "à épingler (nom:version@sha256) — aucune image choisie"
+status: prepared
+activation: not_implemented
+official: true
+image: null            # serveur intégré à GitLab (aucune image) ; accès via relais N4 à définir
+transport: http
+url: "https://gitlab.com/api/v4/mcp"   # ou https://<instance>/api/v4/mcp (Self-Managed / Dedicated)
+headers:
+  X-Gitlab-Enabled-Mcp-Server-Toolsets: "core,merge_requests,work_items,repository"
+auth:
+  method: "OAuth 2.0 (enregistrement dynamique, portée mcp) ou PAT à granularité fine (ressource « MCP tool », Execute)"
+  env: GITLAB_MCP_TOKEN
+  created: false
+  note: "aucune portée lecture seule côté GitLab : restriction par permissions.yaml (deny par défaut) et jeux d'outils"
+prerequisites:
+  - "accès MCP autorisé par un administrateur / propriétaire du groupe racine"
 network: local-ai-mcp
 network_profile_required: N4
+egress_allowlist: ["gitlab.com:443"]
 env_file: secrets/mcp-gitlab.env
 compose_template: compose/templates/mcp.yaml
+opencode_snippet: opencode.snippet.json

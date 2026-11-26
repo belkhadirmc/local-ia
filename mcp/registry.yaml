@@ -1,36 +1,52 @@
-# Registre MCP — tous les serveurs DÉSACTIVÉS. Aucun serveur concret ni identifiant réel.
+# Registre MCP — serveurs officiels PRÉPARÉS en 7.B.1, tous DÉSACTIVÉS. Aucun compte connecté, aucun jeton créé.
+# Gestion : .\local-ai.ps1 mcp list | status | enable <id> | disable <id> (enable refuse tant que N4 n'est pas implémenté).
 schema: local-ai/mcp-registry/v1
 default:
   enabled: false
   network: local-ai-mcp
   network_profile_required: N4
   security: ask
+architecture_n4:
+  status: not_implemented
+  principle: "OpenCode reste sans route Internet (N1) ; chaque serveur MCP autorisé tourne dans son propre conteneur"
+  client_side: "opencode -> réseau interne local-ai-mcp-relay (à créer) -> relais MCP HTTP du serveur (http://mcp-<id>:8080/mcp, jeton local)"
+  server_side: "relais / serveur MCP sur local-ai-mcp (sortie Internet limitée à egress_allowlist), secrets/mcp-<id>.env monté en env_file"
+  hardening: "uid non root, racine en lecture seule, cap_drop ALL, no-new-privileges, aucun socket Docker, image épinglée nom:version@sha256"
+  blocking: "aucune image de relais MCP autorisée ni filtrage de sortie par destination disponible sans téléchargement/construction : activation refusée"
 servers:
   - id: github
     name: GitHub
     enabled: false
-    status: template
+    status: prepared
+    activation: not_implemented
+    transport: stdio
     definition: github/server.yaml
     permissions: github/permissions.yaml
     secrets: secrets/mcp-github.env
   - id: gitlab
     name: GitLab
     enabled: false
-    status: template
+    status: prepared
+    activation: not_implemented
+    transport: http
     definition: gitlab/server.yaml
     permissions: gitlab/permissions.yaml
     secrets: secrets/mcp-gitlab.env
   - id: jira
     name: Jira
     enabled: false
-    status: template
+    status: prepared
+    activation: not_implemented
+    transport: http
     definition: jira/server.yaml
     permissions: jira/permissions.yaml
     secrets: secrets/mcp-jira.env
   - id: confluence
     name: Confluence
     enabled: false
-    status: template
+    status: prepared
+    activation: not_implemented
+    transport: http
     definition: confluence/server.yaml
     permissions: confluence/permissions.yaml
     secrets: secrets/mcp-confluence.env

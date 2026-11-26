@@ -1,0 +1,9 @@
+{
+  "jira": {
+    "type": "remote",
+    "url": "http://mcp-jira:8080/mcp",
+    "disabled": true,
+    "oauth": false,
+    "headers": { "Authorization": "Bearer {env:LOCAL_AI_MCP_RELAY_TOKEN}" }
+  }
+}

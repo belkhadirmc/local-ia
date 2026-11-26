@@ -1,13 +1,26 @@
-# Serveur MCP Confluence — MODÈLE désactivé.
+# Serveur MCP Confluence — PRÉPARÉ, DÉSACTIVÉ (7.B.1). Source : Atlassian Rovo MCP server (support.atlassian.com, passerelle IA Atlassian v2).
 schema: local-ai/mcp-server/v1
 id: confluence
 name: Confluence
 enabled: false
-status: template
-image: null
-transport: null
-image_note: "à épingler (nom:version@sha256) — aucune image choisie"
+status: prepared
+activation: not_implemented
+official: true
+image: null            # serveur distant officiel Atlassian (aucune image) ; accès via relais N4 à définir
+transport: http
+url: "https://mcp.atlassian.com/v2/mcp"
+shared_endpoint_with: jira
+auth:
+  method: "OAuth 2.1 (interactif) ; jeton API / clé de compte de service seulement si l'administrateur de l'organisation l'autorise"
+  env: ATLASSIAN_MCP_TOKEN
+  created: false
+admin_controls:
+  permission_groups_read_only: "read_confluence"
+  disabled_by_default: ["delete_jira", "manage_jira"]
+  note: "les permissions Jira/Confluence existantes de l'utilisateur s'appliquent"
 network: local-ai-mcp
 network_profile_required: N4
+egress_allowlist: ["mcp.atlassian.com:443"]
 env_file: secrets/mcp-confluence.env
 compose_template: compose/templates/mcp.yaml
+opencode_snippet: opencode.snippet.json

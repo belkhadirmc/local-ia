@@ -1,4 +1,4 @@
-# Catalogue des réseaux local-ai. Aucun réseau créé en 3.B.1.
+# Catalogue des réseaux local-ai. Créés : local-ai-core (4.B.1), local-ai-localhost (7.B.1).
 schema: local-ai/networks/v1
 networks:
   - name: local-ai-core
@@ -27,7 +27,7 @@ networks:
   - name: local-ai-localhost
     internal: false
     authorization: required
-    note: "publication 127.0.0.1 sans NAT sortant (à tester)"
+    note: "publication 127.0.0.1 ; sortie Internet NON bloquée par enable_ip_masquerade=false (7.B.1, R1) : routes par défaut retirées par egress-guard (opencode)"
     defined_in: "compose/overrides/*-localhost.yaml"
 ports_planned:
   - service: ollama

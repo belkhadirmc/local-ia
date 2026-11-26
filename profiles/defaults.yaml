@@ -18,12 +18,12 @@ applied:
   network:
     profile: N1
     status: applied
-    verified: "2026-11-25 (action 4.B.1)"
-    detail: "ollama sur local-ai-core (interne) uniquement, aucun port publié, aucun réseau externe"
+    verified: "2026-11-26 (actions 4.B.1, 7.B.1)"
+    detail: "ollama sur local-ai-core (interne), aucun port publié ; opencode : 127.0.0.1:4096 uniquement, sans route par défaut (sortie Internet vérifiée bloquée, R1)"
   security:
     profile: S2
-    status: partial
-    reason: "aucun agent déployé ; durcissement conteneur appliqué à ollama (4.B.1)"
+    status: applied
+    reason: "agents OpenCode déployés avec permissions des définitions (base deny, ask pour edit/shell) ; durcissement conteneur ollama + opencode"
     container_hardening: "uid 1000, cap_drop ALL, seccomp, no-new-privileges, racine en lecture seule"
   backup:
     profile: BK1
@@ -43,4 +43,18 @@ modules:
     models_size_gib: 52.98
     models_tested_offline: "7/7 PASS (5.B.1)"
     verified: "2026-11-25 (actions 4.B.1, 5.B.1)"
+  opencode:
+    status: running
+    image: "ghcr.io/anomalyco/opencode:2.3.2@sha256:43d4d0fb1d94fed8db615f865df7661104a39af6ca94dad631c09844b5e3ff22"
+    platform: linux/amd64
+    volume: local-ai-opencode
+    access: "http://127.0.0.1:4096 (Basic, secrets/opencode.env) ; terminal : local-ai.ps1 tui"
+    provider: "ollama interne uniquement, 7 modèles, contexte 8192 max"
+    agents: "9 (affectations initiales, non confirmées)"
+    verified: "2026-11-26 (action 7.B.1)"
+  mcp:
+    status: prepared
+    enabled: 0
+    servers: [github, gitlab, jira, confluence]
+    activation: "refusée (N4 non implémenté)"
 note: "État appliqué renseigné manuellement ; à automatiser via local-ai.ps1 profile (non implémenté)."

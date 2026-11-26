@@ -32,5 +32,5 @@ mcp:
     - jira
   enabled: []
 opencode:
-  export: "à générer depuis cette définition"
-  status: not_converted
+  export: "config/opencode/opencode.json (généré par config/opencode/generate-config.ps1)"
+  status: converted

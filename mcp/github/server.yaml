@@ -1,13 +1,35 @@
-# Serveur MCP GitHub — MODÈLE désactivé.
+# Serveur MCP GitHub — PRÉPARÉ, DÉSACTIVÉ (7.B.1). Source : github.com/github/github-mcp-server (README, docs/remote-server.md).
 schema: local-ai/mcp-server/v1
 id: github
 name: GitHub
 enabled: false
-status: template
-image: null
-transport: null
-image_note: "à épingler (nom:version@sha256) — aucune image choisie"
+status: prepared
+activation: not_implemented   # N4 non implémenté : `local-ai.ps1 mcp enable github` refuse explicitement
+official: true
+# Option retenue : serveur local officiel (stdio) en conteneur dédié sur local-ai-mcp (N4), lecture seule.
+image: "ghcr.io/github/github-mcp-server:v2.3.0@sha256:110ce018ce2a559b3d552673e675806ad9c2abbc1749360d41289ea415c67926"
+image_index_digest: "sha256:f8ee4dedc7d5c8cb32854ab91cc92a31c55a8a5510708cf8742e9f9427588ca6"
+image_pulled: false
+platform: linux/amd64
+transport: stdio
+command: ["github-mcp-server", "stdio", "--read-only", "--toolsets", "context,repos,issues,pull_requests"]
+environment:
+  GITHUB_READ_ONLY: "1"
+  GITHUB_TOOLSETS: "context,repos,issues,pull_requests"
+  GITHUB_HOST: "https://github.com"
+# Alternative officielle (non retenue : sortie Internet directe depuis le client) :
+remote:
+  url: "https://api.githubcopilot.com/mcp/readonly"
+  transport: http
+  auth: "OAuth ou PAT (Authorization: Bearer)"
+  headers: {X-MCP-Readonly: "true", X-MCP-Toolsets: "context,repos,issues,pull_requests"}
+auth:
+  method: "PAT à granularité fine, lecture seule, dépôts sélectionnés"
+  env: GITHUB_PERSONAL_ACCESS_TOKEN
+  created: false
 network: local-ai-mcp
 network_profile_required: N4
+egress_allowlist: ["api.github.com:443", "github.com:443"]
 env_file: secrets/mcp-github.env
 compose_template: compose/templates/mcp.yaml
+opencode_snippet: opencode.snippet.json
