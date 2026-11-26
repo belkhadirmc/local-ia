@@ -24,6 +24,7 @@ $Implemented = [ordered]@{
     'model'  = 'model list | model show <tag> (lecture seule ; pull/rm NON IMPLÉMENTÉS)'
     'tui'    = 'Interface terminal OpenCode (dans le conteneur, serveur interne)'
     'mcp'    = 'mcp list | status | enable <id> | disable <id> (enable refusé tant que N4 non implémenté)'
+    'agent'  = 'agent list | agent model <agent> [<modèle>] | agent reset <agent|all> (BK1 + rollback, OpenCode régénéré)'
 }
 # Modules démarrables : profils Compose, image (variables .env), volumes externes requis, services arrêtés par stop
 $Modules = @{
@@ -33,7 +34,6 @@ $Modules = @{
 }
 $Planned = [ordered]@{
     'profile'        = 'Afficher / appliquer un profil (A-C, N1-N4, S1-S4, BK1-BK3)'
-    'agent'          = 'Gérer les agents'
     'monitor'        = 'Supervision selon config/monitoring/thresholds.yaml'
     'permissions'    = 'Consulter / modifier les permissions'
     'backup'         = 'Sauvegarde BK1 / BK2 / BK3'
@@ -364,6 +364,137 @@ function Invoke-Model {
     }
 }
 
+# ------------------------------------------------------------------ agents (affectation manuelle des modèles)
+function Get-ModelInfo {
+    # Registre + synthèse des benchmarks 6.B.1 (outils, RAM) pour les avertissements.
+    $text = Get-Content (Join-Path $Root 'models\registry.yaml') -Raw -Encoding UTF8
+    foreach ($b in ([regex]::Split($text, '(?m)^\s*-\s+id:\s*') | Select-Object -Skip 1)) {
+        $bm = [regex]::Match($b, '(?m)^\s+benchmark:\s*\{([^\r\n]*)\}').Groups[1].Value
+        $num = { param($k) $m = [regex]::Match($bm, '\b' + $k + ':\s*([\d.]+)'); if ($m.Success) { [double]::Parse($m.Groups[1].Value, [Globalization.CultureInfo]::InvariantCulture) } else { $null } }
+        [pscustomobject]@{ Id = ($b -split '\s')[0]; Tag = [regex]::Match($b, '(?m)^\s+tag:\s*(\S+)').Groups[1].Value
+            Tools = (& $num 'tools'); Ram8192 = (& $num 'peak_wsl_pct_8192'); Score = (& $num 'score') }
+    }
+}
+
+function Get-AgentInfo {
+    $u = New-Object Text.UTF8Encoding $false
+    $init = @{}; Get-Content (Join-Path $Root 'agents\assignments.initial.yaml') -Encoding UTF8 | Where-Object { $_ -match '^\s{2}([\w-]+):\s*(\S+)' } | ForEach-Object { $init[$Matches[1]] = $Matches[2] }
+    foreach ($f in (Get-ChildItem (Join-Path $Root 'agents\definitions') -Filter *.yaml | Sort-Object Name)) {
+        $t = [IO.File]::ReadAllText($f.FullName, $u)
+        $tools = [regex]::Match($t, '(?ms)^tools:\s*\r?\n((?:\s+-\s*\S+\r?\n?)*)').Groups[1].Value
+        [pscustomobject]@{ Id = [regex]::Match($t, '(?m)^id:\s*(\S+)').Groups[1].Value; Ref = [regex]::Match($t, '(?m)^\s+ref:\s*(\S+)').Groups[1].Value
+            Initial = $init[[regex]::Match($t, '(?m)^id:\s*(\S+)').Groups[1].Value]; Continue = ($t -match '(?m)^type:\s*continue-autocomplete')
+            UsesTools = [bool]($tools -match '-\s*(edit|write|bash|test)'); File = $f.FullName }
+    }
+}
+
+function Get-ModelWarnings($Agent, $Model) {
+    $w = @()
+    if ($Agent.Continue) { $w += 'Continue : hors OpenCode, intégration différée (étape 11)' }
+    elseif ($null -ne $Model.Tools -and $Model.Tools -eq 0) { $w += "OUTILS : appels d'outils non extraits par Ollama (6.B.1, tools=0)$(if ($Agent.UsesTools) { ' — agent à outils (edit/bash/test)' })" }
+    if ($null -ne $Model.Ram8192 -and $Model.Ram8192 -ge 80) { $w += ("RAM : pic {0} % de RAM WSL2 à 8192 (alerte 85 %), usage exclusif" -f $Model.Ram8192) }
+    elseif ($null -ne $Model.Ram8192 -and $Model.Ram8192 -ge 50) { $w += ("RAM : pic {0} % à 8192" -f $Model.Ram8192) }
+    $w
+}
+
+function Invoke-OpenCodeReload {
+    # Régénère la configuration OpenCode ; redémarre le service si actif (espace réseau isolé conservé) et vérifie l'agent.
+    param([string]$AgentId, [string]$Tag)
+    $r = Invoke-Native powershell @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $Root 'config\opencode\generate-config.ps1'))
+    if ($r.Code -ne 0) { throw "génération OpenCode : $($r.Output)" }
+    $j = Get-Content (Join-Path $Root 'config\opencode\opencode.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($AgentId -and $env:LOCAL_AI_TEST_FAIL_RELOAD -eq '1') { throw 'échec simulé (LOCAL_AI_TEST_FAIL_RELOAD=1, test du rollback)' }
+    if ($AgentId -and $Tag -and $j.agents.$AgentId.model -ne "ollama/$Tag") { throw "opencode.json : agent $AgentId -> $($j.agents.$AgentId.model) (attendu ollama/$Tag)" }
+    $id = (Invoke-Native docker @('compose', '-f', (Join-Path $Root 'compose.yaml'), '--profile', 'ollama', '--profile', 'opencode', 'ps', '-q', '--status', 'running', 'opencode')).Output.Trim()
+    if (-not $id) { return 'OpenCode arrêté : configuration appliquée au prochain démarrage' }
+    $r = Invoke-Native docker @('restart', $id); if ($r.Code -ne 0) { throw "redémarrage OpenCode : $($r.Output)" }
+    $deadline = (Get-Date).AddSeconds(120)
+    do { Start-Sleep 3; $h = (Invoke-Native docker @('inspect', $id, '--format', '{{.State.Health.Status}}')).Output.Trim() } while ($h -ne 'healthy' -and (Get-Date) -lt $deadline)
+    if ($h -ne 'healthy') { throw "OpenCode non sain après redémarrage ($h)" }
+    if ($AgentId -and $Tag) {
+        $a = (Invoke-Native docker @('exec', $id, 'opencode', 'api', '--server', 'http://127.0.0.1:4096', 'GET', "/api/agent/$AgentId")).Output
+        if ($a -notmatch ('"model":\{"id":"' + [regex]::Escape($Tag) + '","providerID":"ollama"')) { throw "serveur OpenCode : agent $AgentId sans le modèle $Tag" }
+    }
+    'OpenCode redémarré (sain), agent vérifié via l''API'
+}
+
+function New-AgentRestorePoint([string]$AgentId, [string[]]$Files) {
+    # BK1 : copie des fichiers de configuration concernés + SHA256SUMS.txt + manifest (aucun secret).
+    $ts = Get-Date -Format 'yyyyMMdd_HHmmss'
+    $dir = Join-Path $Root "backups\restore-points\agent_${AgentId}_$ts"
+    New-Item -ItemType Directory -Force $dir | Out-Null
+    $sums = @(); $man = @("restore_point: agent_${AgentId}_$ts", 'profile: BK1', "created: $(Get-Date -Format s)", 'files:')
+    foreach ($f in $Files) {
+        $rel = $f.Substring($Root.Length + 1); $dst = Join-Path $dir $rel
+        New-Item -ItemType Directory -Force (Split-Path $dst) | Out-Null; Copy-Item $f $dst
+        $h = (Get-FileHash $dst -Algorithm SHA256).Hash.ToLowerInvariant(); $sums += "$h  $($rel -replace '\\','/')"; $man += "  - $($rel -replace '\\','/')"
+    }
+    [IO.File]::WriteAllLines((Join-Path $dir 'SHA256SUMS.txt'), [string[]]$sums); [IO.File]::WriteAllLines((Join-Path $dir 'manifest.yaml'), [string[]]$man)
+    $dir
+}
+
+function Restore-AgentRestorePoint([string]$Dir) {
+    foreach ($l in (Get-Content (Join-Path $Dir 'SHA256SUMS.txt'))) {
+        $h, $rel = $l -split '\s+', 2; $src = Join-Path $Dir $rel
+        if ((Get-FileHash $src -Algorithm SHA256).Hash.ToLowerInvariant() -ne $h) { throw "intégrité du point de restauration : $rel" }
+        Copy-Item $src (Join-Path $Root $rel) -Force
+    }
+}
+
+function Set-AgentModel($Agent, $Model, [string]$Reason) {
+    if ($Agent.Ref -eq $Model.Id) { return "Agent $($Agent.Id) : déjà sur $($Model.Id) ($($Model.Tag)), aucune modification." }
+    $cfg = Join-Path $Root 'config\opencode\opencode.json'
+    $bk = New-AgentRestorePoint $Agent.Id @($Agent.File, $cfg)
+    $u = New-Object Text.UTF8Encoding $false
+    try {
+        $t = [IO.File]::ReadAllText($Agent.File, $u)
+        $n = [regex]::Replace($t, '(?m)^(\s+ref:\s*)\S+', '${1}' + $Model.Id, 1)
+        [IO.File]::WriteAllText($Agent.File, $n, $u)
+        $msg = Invoke-OpenCodeReload $(if ($Agent.Continue) { $null } else { $Agent.Id }) $Model.Tag
+    } catch {
+        $err = $_.Exception.Message
+        Restore-AgentRestorePoint $bk
+        try { [void](Invoke-OpenCodeReload) } catch { }
+        throw "ÉCHEC ($err) — ROLLBACK effectué depuis $($bk.Substring($Root.Length + 1))"
+    }
+    "Agent $($Agent.Id) : $($Agent.Ref) -> $($Model.Id) ($($Model.Tag)) [$Reason] | $msg | point BK1 : $($bk.Substring($Root.Length + 1))"
+}
+
+function Invoke-Agent {
+    param([string[]]$Args0)
+    $sub = if ($Args0 -and $Args0[0]) { $Args0[0].ToLowerInvariant() } else { 'list' }
+    $agents = @(Get-AgentInfo); $models = @(Get-ModelInfo)
+    $findAgent = { param($n) $a = $agents | Where-Object Id -eq $n | Select-Object -First 1; if (-not $a) { throw "Agent '$n' inconnu (agents : $($agents.Id -join ', '))." }; $a }
+    $findModel = { param($n) $m = $models | Where-Object { $_.Id -eq $n -or $_.Tag -eq $n } | Select-Object -First 1; if (-not $m) { throw "Modèle '$n' absent de models/registry.yaml (aucun téléchargement ; disponibles : $($models.Tag -join ', '))." }; $m }
+    switch ($sub) {
+        'list' {
+            $agents | ForEach-Object { $a = $_; $m = $models | Where-Object Id -eq $a.Ref | Select-Object -First 1
+                [pscustomobject]@{ Agent = $a.Id; Modèle = $(if ($m) { $m.Tag } else { "$($a.Ref) (INCONNU)" }); Initial = $(if ($a.Ref -eq $a.Initial) { 'oui' } else { "NON ($($a.Initial))" })
+                    Client = $(if ($a.Continue) { 'Continue' } else { 'OpenCode' }); Avertissements = ((Get-ModelWarnings $a $m) -join ' ; ') } } | Format-Table -AutoSize -Wrap | Out-String -Width 220 | Write-Output
+            Write-Output 'Sélection temporaire (session uniquement) : Web http://127.0.0.1:4096 ou TUI (.\local-ai.ps1 tui), sélecteur de modèle.'
+        }
+        'model' {
+            if (-not $Args0 -or $Args0.Count -lt 2) { throw 'Usage : .\local-ai.ps1 agent model <agent> [<modèle>]' }
+            $a = & $findAgent $Args0[1]
+            if ($Args0.Count -lt 3) {
+                $m = $models | Where-Object Id -eq $a.Ref | Select-Object -First 1; $mi = $models | Where-Object Id -eq $a.Initial | Select-Object -First 1
+                Write-Output ("Agent {0} : {1} ({2}) | initial : {3} ({4}) | client : {5}" -f $a.Id, $a.Ref, $m.Tag, $a.Initial, $mi.Tag, $(if ($a.Continue) { 'Continue' } else { 'OpenCode' }))
+                foreach ($w in (Get-ModelWarnings $a $m)) { Write-Output "  ! $w" }
+                return
+            }
+            $m = & $findModel $Args0[2]
+            foreach ($w in (Get-ModelWarnings $a $m)) { Write-Output "  ! $w (aucune substitution automatique)" }
+            Write-Output (Set-AgentModel $a $m 'manuel')
+        }
+        'reset' {
+            if (-not $Args0 -or $Args0.Count -lt 2) { throw 'Usage : .\local-ai.ps1 agent reset <agent|all>' }
+            $targets = if ($Args0[1] -eq 'all') { $agents } else { @(& $findAgent $Args0[1]) }
+            foreach ($a in $targets) { $m = & $findModel $a.Initial; Write-Output (Set-AgentModel $a $m 'restauration initiale') }
+        }
+        default { Write-Error ("Sous-commande 'agent {0}' NON IMPLÉMENTÉE (disponibles : list, model, reset)." -f $sub) -ErrorAction Continue; exit 2 }
+    }
+}
+
 function Get-McpServers {
     $reg = Get-Content (Join-Path $Root 'mcp\registry.yaml') -Raw -Encoding UTF8
     foreach ($b in ([regex]::Split($reg, '(?m)^\s*-\s+id:\s*') | Select-Object -Skip 1)) {
@@ -436,6 +567,7 @@ function Start-Tui {
 }
 
 switch ($Command.ToLowerInvariant()) {
+    'agent'  { try { Invoke-Agent $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
     'mcp'    { try { Invoke-Mcp $Arguments } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
     'tui'    { try { Start-Tui } catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 1 }; exit 0 }
     'help'   { Show-Help; exit 0 }

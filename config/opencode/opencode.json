@@ -11,7 +11,10 @@
                       "ollama":  {
                                      "name":  "Ollama (local-ai, interne)",
                                      "settings":  {
-                                                      "baseURL":  "http://ollama:11434/v1"
+                                                      "baseURL":  "http://ollama:11434/v1",
+                                                      "timeout":  false,
+                                                      "headerTimeout":  1500000,
+                                                      "chunkTimeout":  600000
                                                   },
                                      "models":  {
                                                     "qwen2.5-coder:1.5b":  {

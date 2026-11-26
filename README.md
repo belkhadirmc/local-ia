@@ -33,7 +33,13 @@ MCP GitHub, GitLab, Jira, Confluence **préparés et désactivés**.
 .\local-ai.ps1 model list                # modèles présents vs registre
 .\local-ai.ps1 model show <tag>          # détails d'un modèle référencé
 .\local-ai.ps1 mcp list|status           # serveurs MCP préparés (enable refusé tant que N4 non implémenté)
+.\local-ai.ps1 agent list                # agents, modèles, écarts à l'affectation initiale, avertissements outils/RAM
+.\local-ai.ps1 agent model <agent> [<modèle>]   # afficher / changer durablement (BK1 + rollback, OpenCode régénéré)
+.\local-ai.ps1 agent reset <agent|all>   # revenir aux affectations initiales (agents/assignments.initial.yaml)
 ```
+
+Sélection **temporaire** d'un modèle : sélecteur de la session dans le Web ou le TUI (7 modèles du registre).
+OpenCode Desktop (Windows) : **non utilisé** — il impose un serveur autonome sur l'hôte avec accès Internet (ADR-0008, R9).
 
 Mot de passe Web/API : `secrets/opencode.env` (non versionné). Les autres commandes (`profile`, `agent`, `monitor`, `permissions`,
 `backup`, `restore`, `maintenance`, `emergency-stop`) sont prévues et échouent explicitement tant qu'elles ne sont pas implémentées.

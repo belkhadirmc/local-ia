@@ -50,8 +50,9 @@ modules:
     volume: local-ai-opencode
     access: "http://127.0.0.1:4096 (Basic, secrets/opencode.env) ; terminal : local-ai.ps1 tui"
     provider: "ollama interne uniquement, 7 modèles, contexte 8192 max"
-    agents: "9 (affectations initiales, non confirmées)"
-    verified: "2026-11-26 (action 7.B.1)"
+    agents: "9 (affectations initiales, non confirmées ; référence agents/assignments.initial.yaml ; gestion local-ai.ps1 agent)"
+    clients: "Web et TUI ; Desktop Windows bloqué (serveur autonome imposé, ADR-0008)"
+    verified: "2026-11-26 (actions 7.B.1, 8.B.1)"
   mcp:
     status: prepared
     enabled: 0

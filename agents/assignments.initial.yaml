@@ -1,0 +1,14 @@
+# Affectations INITIALES des agents (référence de restauration pour local-ai.ps1 agent reset). Ne pas modifier.
+# Figées le 2026-11-26 (8.B.1) depuis agents/definitions/*.yaml (non confirmées, voir R5).
+schema: local-ai/agent-assignments/v1
+assignments:
+  architect: gpt-oss-20b
+  assistant: qwen3.5-4b
+  autocomplete: qwen2.5-coder-1.5b
+  debugger: qwen2.5-coder-14b
+  developer: qwen3-coder-30b
+  devops: qwen3-coder-30b
+  documentalist: qwen3.5-9b
+  qa: qwen2.5-coder-7b
+  reviewer: gpt-oss-20b
+  security: gpt-oss-20b

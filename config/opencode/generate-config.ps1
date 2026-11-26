@@ -77,7 +77,7 @@ $cfg = [ordered]@{
     websearch     = $false
     lsp           = $false
     formatter     = $false
-    providers     = [ordered]@{ ollama = [ordered]@{ name = 'Ollama (local-ai, interne)'; settings = [ordered]@{ baseURL = 'http://ollama:11434/v1' }; models = $models } }
+    providers     = [ordered]@{ ollama = [ordered]@{ name = 'Ollama (local-ai, interne)'; settings = [ordered]@{ baseURL = 'http://ollama:11434/v1'; timeout = $false; headerTimeout = 1500000; chunkTimeout = 600000 }; models = $models } }
     policies      = @(
         (Rule 'provider.use' '*' 'deny'), (Rule 'provider.use' 'ollama' 'allow'),
         (Rule 'websearch.use' '*' 'deny'), (Rule 'mcp.use' '*' 'deny'),
