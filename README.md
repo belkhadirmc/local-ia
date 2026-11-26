@@ -1,12 +1,12 @@
 # local-ai
 
 Infrastructure de développement multi-agent locale : Docker Desktop (WSL2), Ollama, OpenCode, Continue, VS Code.
-État (11.B.1) : **Ollama 0.40.18** (CPU, réseau interne, aucun port publié) avec **7 modèles** (52,98 Gio, aucun chargé au repos, benchmarks 6.B.1) ;
+État (11.B.2) : **Ollama 0.40.18** (CPU, réseau interne, aucun port publié) avec **7 modèles** (52,98 Gio, aucun chargé au repos, benchmarks 6.B.1) ;
 **OpenCode 2.3.2** sur `http://127.0.0.1:4096` (authentification locale, sans accès Internet, fournisseur Ollama interne uniquement) ;
 **10 agents** finalisés (9 dans OpenCode, Assistant par défaut ; autocomplétion Continue à l'étape 11), permissions S2 et délégations de profondeur 1 appliquées par le serveur ; raisonnement des modèles qwen3.5 désactivé dans OpenCode (9.B.2 : premier message ≈ 110 s à froid, puis ≈ 10 s) ;
 sécurité S1–S4 (S2 par défaut), permissions gérées, refus techniques prioritaires, arrêt d'urgence et journal d'audit (10.B.1) ;
 MCP GitHub, GitLab, Jira, Confluence **préparés et désactivés**, architecture N4 (relais isolés, sortie filtrée par destination) prête ;
-VS Code : **Continue 2.0.0** (autocomplétion locale qwen2.5-coder:1.5b via relais 127.0.0.1:11435, désactivée par défaut) et **Dev Containers 0.481.0**
+VS Code : **Continue 2.0.0** (autocomplétion locale qwen2.5-coder:1.5b via relais 127.0.0.1:11435, désactivée par défaut, Tab validé) et **Dev Containers 0.481.0**, extensions épinglées
 (projets isolés : workspace dédié, réseau interne, seul le projet ouvert partagé avec OpenCode) — guide : `docs/guides/projects.md`.
 
 ## Arborescence

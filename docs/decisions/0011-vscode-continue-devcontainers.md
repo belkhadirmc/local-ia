@@ -63,3 +63,25 @@ le `package.json` et le code de Continue 2.0.0 (et non supposés) : `continue.*`
 | Complétion dans l'éditeur VS Code (Continue), ouverture « Reopen in Container », terminal « OpenCode (local-ai) » | Interface | **NON EFFECTUÉ** (aucune saisie dans l'IDE possible depuis cette session) |
 
 Ressources de test supprimées (projets `demo-a`, `demo-b` : conteneurs, réseaux, volumes, dossiers, points de montage vides).
+
+## Correctif 11.B.2 — TUI OpenCode et épinglage des extensions
+
+BK1 : `backups/restore-points/11.B.2_20261126_182952`.
+
+- **Cause** : `local-ai.ps1 tui` échouait (`Failed to initialize OpenTUI render library … /tmp/.bun-1000-*.so: Operation not permitted`).
+  Bun extrait les bibliothèques natives d'OpenTUI dans `TMPDIR` (défaut `/tmp`), monté en tmpfs `noexec`.
+- **Correctif minimal** : tmpfs dédié `/tui-tmp` (64 Mio, `exec,nosuid,nodev`, uid/gid 1000, mode 0700) dans le service `opencode` ;
+  `local-ai.ps1 tui` passe `TMPDIR=/tui-tmp` au seul `docker exec` du TUI. `/tmp` reste `noexec,nosuid,nodev` ; le serveur n'a pas de
+  `TMPDIR` ; uid 1000, `cap_drop: ALL`, racine en lecture seule, `no-new-privileges` inchangés. Bun respecte `TMPDIR` (vérifié).
+- **Extensions** : `Continue.continue@2.0.0` et `ms-vscode-remote.remote-containers@0.481.0` épinglées (`pinned: true`, stables) ; mises à
+  jour automatiques désactivées manuellement par l'utilisateur (R21 levée).
+
+| Test 11.B.2 | Type | Résultat |
+|---|---|---|
+| Échec reproduit avant correctif (`/tmp` noexec) | CLI | PASS (reproduit) |
+| `local-ai.ps1 tui` dans un vrai terminal (commande identique au profil VS Code) : écran OpenCode 2.3.2, Assistant, modèle local ; bibliothèque chargée depuis `/tui-tmp` | Terminal | PASS |
+| Profil « OpenCode (local-ai) » ouvert depuis VS Code | Interface | NON EFFECTUÉ (même commande testée hors VS Code) |
+| `/tmp` toujours noexec (exécution refusée), serveur sans `TMPDIR` | Conteneur | PASS |
+| Web 200, API sans authentification 401, 4 sessions conservées, aucune route par défaut, Internet injoignable, 11434 non publié | API | PASS |
+| Autocomplétion et Tab Continue dans l'éditeur | Interface (utilisateur) | PASS (validé manuellement) |
+| `local-ai.ps1 config` | CLI | 16 PASS, 0 FAIL |

@@ -632,7 +632,8 @@ function Start-Tui {
     if (-not (Test-DockerEngine)) { throw 'Docker Engine indisponible.' }
     $id = (Invoke-Native docker @('compose', '-f', (Join-Path $Root 'compose.yaml'), '--profile', 'ollama', '--profile', 'opencode', 'ps', '-q', '--status', 'running', 'opencode')).Output.Trim()
     if (-not $id) { throw "OpenCode n'est pas démarré (.\local-ai.ps1 start opencode)." }
-    & docker exec -it -w /data/workspace $id opencode --server http://127.0.0.1:4096
+    # 11.B.2 : OpenTUI (Bun) extrait des bibliothèques natives dans TMPDIR ; /tmp est noexec -> tmpfs exécutable dédié /tui-tmp.
+    & docker exec -it -e TMPDIR=/tui-tmp -w /data/workspace $id opencode --server http://127.0.0.1:4096
 }
 
 # ------------------------------------------------------------------ permissions

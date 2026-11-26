@@ -21,10 +21,11 @@ Le conteneur n'a pas d'accès Internet : extensions et outils à installer depui
 .\local-ai.ps1 continue off       # arrêt du relais, modèle déchargé
 ```
 
-Puis, dans VS Code, barre d'état « Continue » → *Enable Tab Autocomplete*. Pendant une inférence OpenCode, l'autocomplétion est
+Extensions épinglées (Continue 2.0.0, Dev Containers 0.481.0, mises à jour automatiques désactivées). Puis, dans VS Code, barre d'état « Continue » → *Enable Tab Autocomplete*. Pendant une inférence OpenCode, l'autocomplétion est
 suspendue (réponse 409), sans déchargement du modèle d'OpenCode.
 
 ## OpenCode depuis VS Code
 
-- Terminal : menu du terminal intégré → profil **« OpenCode (local-ai) »** (équivaut à `.\local-ai.ps1 tui`).
+- Terminal : menu du terminal intégré → profil **« OpenCode (local-ai) »** (équivaut à `.\local-ai.ps1 tui`). Le TUI utilise le tmpfs
+  exécutable dédié `/tui-tmp` (`TMPDIR`), `/tmp` restant noexec (11.B.2).
 - Web : `http://127.0.0.1:4096` (utilisateur `opencode`, mot de passe dans `secrets/opencode.env`), par exemple via « Simple Browser: Show ».

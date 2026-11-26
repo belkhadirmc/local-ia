@@ -74,15 +74,16 @@ modules:
     relay: "127.0.0.1:11435 (arrêté par défaut ; local-ai.ps1 continue on|off)"
     telemetry: false
     indexing: false
-    verified: "2026-11-26 (11.B.1, API du relais ; interface non testée)"
+    pinned: true
+    verified: "2026-11-26 (11.B.1 API du relais ; 11.B.2 autocomplétion et Tab validés manuellement par l'utilisateur)"
   projects:
     status: ready
-    extension: "ms-vscode-remote.remote-containers@0.481.0"
+    extension: "ms-vscode-remote.remote-containers@0.481.0 (pinned)"
     image: "mcr.microsoft.com/devcontainers/base:3.0.14-noble@sha256:6d5b4ab2e68690be81f114a096f147fd95f0230910bcd17421e84459e5a17e1a"
     active: none
     sharing: "seul le projet ouvert est monté dans OpenCode (/data/workspace/<id>)"
     verified: "2026-11-26 (11.B.1, projets témoins supprimés)"
   vscode:
-    terminal_profile: "OpenCode (local-ai)"
+    terminal_profile: "OpenCode (local-ai) — TUI avec TMPDIR=/tui-tmp (tmpfs exécutable dédié, 11.B.2)"
     web: "http://127.0.0.1:4096"
 note: "État appliqué renseigné manuellement ; à automatiser via local-ai.ps1 profile (non implémenté)."
